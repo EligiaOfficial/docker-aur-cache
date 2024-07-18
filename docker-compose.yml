@@ -1,0 +1,32 @@
+services:
+  builder:
+    build:
+      context: ./
+      dockerfile: ./docker/Dockerfile
+    volumes:
+      - ./repository:/repository:cached
+    restart: on-failure
+    networks:
+      - default
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./repository:/usr/share/nginx/html:ro
+    restart: on-failure
+    networks:
+      - default
+      - traefik-reverse-proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-reverse-proxy"
+      - "traefik.http.routers.docker-aur-cache-nginx.rule=Host(`${BASE_URL:-docker-aur-cache.localhost}`)"
+      - "traefik.http.routers.docker-aur-cache-nginx.entrypoints=https"
+      - "traefik.http.routers.docker-aur-cache-nginx.tls=true"
+
+# You can find the Traefik reverse proxy container on GitHub
+# https://github.com/CrazyVito11/traefik-reverse-proxy
+networks:
+  traefik-reverse-proxy:
+    name: traefik-reverse-proxy
+    external: true
