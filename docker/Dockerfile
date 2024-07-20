@@ -23,12 +23,15 @@ USER root
 RUN pacman -U --noconfirm yay-*.pkg.tar.zst
 USER builder
 
+# Copy script
+COPY ./docker/build-packages.sh /repository-builder/
+
 # Configure fcron
 USER root
 COPY ./docker/fcron.tab /tmp/
 RUN fcrontab -u builder /tmp/fcron.tab
-COPY ./docker/test.sh /tmp/
 
 WORKDIR /repository-builder
+RUN chmod 777 /repository-builder
 
 CMD ["fcron", "--foreground", "--firstsleep", "0"]

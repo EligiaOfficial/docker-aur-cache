@@ -5,10 +5,12 @@ services:
       dockerfile: ./docker/Dockerfile
     volumes:
       - ./repository:/repository:cached
+      - ./packagelist.txt:/repository-builder/packagelist.txt:cached
     restart: on-failure
     networks:
       - default
 
+  # TODO: Fix issue where NGINX doesn't allow listing the directory (autoindex is turned off)
   nginx:
     image: nginx:latest
     volumes:
