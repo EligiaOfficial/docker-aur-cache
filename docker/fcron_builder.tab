@@ -1,0 +1,3 @@
+# TODO: Enable this cron job once the application is ready
+# Automatically update the packages (Sunday @ 01:00)
+#0 1 * * 0 builder /tmp/test.sh

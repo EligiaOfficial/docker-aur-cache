@@ -1,0 +1,14 @@
+{
+  "name": "builder",
+  "main": "./src/builder.ts",
+  "scripts": {
+    "build": "npx tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.11",
+    "typescript": "^5.5.3"
+  },
+  "dependencies": {
+    "minimist": "^1.2.8"
+  }
+}
