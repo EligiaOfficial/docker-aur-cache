@@ -35,4 +35,86 @@ export default class MakepkgHelper {
             resolve(parsedData);
         });
     }
+
+    public static getEstimatedOutputFilenameFromPkgbuildData(pkgbuildData: object): string | null {
+        if (! ("pkgname" in pkgbuildData)) {
+            return null;
+        }
+
+        if (! ("pkgver" in pkgbuildData)) {
+            return null;
+        }
+
+        if (! ("pkgrel" in pkgbuildData)) {
+            return null;
+        }
+
+        if (! ("arch" in pkgbuildData)) {
+            return null;
+        }
+
+        let architecture = pkgbuildData.arch;
+        if (Array.isArray(pkgbuildData.arch)) {
+            architecture = pkgbuildData.arch[0];
+        }
+
+        return `${pkgbuildData.pkgname}-${pkgbuildData.pkgver}-${pkgbuildData.pkgrel}-${architecture}.pkg.tar.zst`;
+    }
+
+    // TODO: Handle packages that expect certain versions (Example: "python>=3.3")
+    public static getDependsFromPkgbuildData(pkgbuildData: object): Array<string> {
+        if (! ("depends" in pkgbuildData)) {
+            return [];
+        }
+
+        // If it's only 1 package, it will be interpreted as a field instead of an array
+        if (typeof pkgbuildData.depends === "string") {
+            return [pkgbuildData.depends];
+        }
+
+        // Mostly just in case it some weird value
+        if (! Array.isArray(pkgbuildData.depends)) {
+            return [];
+        }
+
+        return pkgbuildData.depends;
+    }
+
+    // TODO: Handle packages that expect certain versions (Example: "python>=3.3")
+    public static getMakeDependsFromPkgbuildData(pkgbuildData: object): Array<string> {
+        if (! ("makedepends" in pkgbuildData)) {
+            return [];
+        }
+
+        // If it's only 1 package, it will be interpreted as a field instead of an array
+        if (typeof pkgbuildData.makedepends === "string") {
+            return [pkgbuildData.makedepends];
+        }
+
+        // Mostly just in case it some weird value
+        if (! Array.isArray(pkgbuildData.makedepends)) {
+            return [];
+        }
+
+        return pkgbuildData.makedepends;
+    }
+
+    // TODO: Handle packages that expect certain versions (Example: "python>=3.3")
+    public static getCheckDependsFromPkgbuildData(pkgbuildData: object): Array<string> {
+        if (! ("checkdepends" in pkgbuildData)) {
+            return [];
+        }
+
+        // If it's only 1 package, it will be interpreted as a field instead of an array
+        if (typeof pkgbuildData.checkdepends === "string") {
+            return [pkgbuildData.checkdepends];
+        }
+
+        // Mostly just in case it some weird value
+        if (! Array.isArray(pkgbuildData.checkdepends)) {
+            return [];
+        }
+
+        return pkgbuildData.checkdepends;
+    }
 }

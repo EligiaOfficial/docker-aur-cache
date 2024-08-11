@@ -1,8 +1,9 @@
-FROM archlinux:latest
+FROM --platform=linux/amd64 archlinux:multilib-devel
 
 # Update the image and install dependencies
+# TODO: Install NVM instead of NodeJS
 RUN pacman-key --init
-RUN pacman -Syu --noconfirm git base-devel fcron
+RUN pacman -Syu --noconfirm git base-devel fcron nodejs npm
 
 # Create the builder user
 RUN useradd -ms /bin/bash builder
@@ -13,21 +14,20 @@ USER builder
 RUN mkdir -p /home/builder
 WORKDIR /home/builder
 
-# Install YAY
-RUN git clone https://aur.archlinux.org/yay.git;
-WORKDIR /home/builder/yay
-USER root
-RUN source ./PKGBUILD && pacman -Syu --noconfirm --needed --asdeps "${makedepends[@]}" "${depends[@]}"
+# Build builder application
 USER builder
-RUN makepkg
+COPY ./builder /builder
 USER root
-RUN pacman -U --noconfirm yay-*.pkg.tar.zst
+RUN chown -R builder /builder
 USER builder
-
-# TODO: Copy over and compile the package builder
+WORKDIR /builder
+RUN npm install && npm run build
 
 # Copy script
+USER root
 COPY ./docker/build-packages.sh /repository-builder/
+RUN chmod 777 /repository-builder/build-packages.sh
+USER builder
 
 # Configure fcron
 USER root
