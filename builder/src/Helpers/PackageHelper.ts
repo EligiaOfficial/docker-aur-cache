@@ -1,6 +1,8 @@
 import { execSync } from "child_process";
 import { existsSync } from "fs";
 import MakepkgHelper from "./MakepkgHelper";
+import AurRpcApiInfoResponse from "../Types/AurRpcApiInfoResponse";
+import PackageTypeHelper from "./PackageTypeHelper";
 
 export default class PackageHelper {
     private static validPackageNameRegex = new RegExp(/^[a-z0-9\-_]+$/);
@@ -38,25 +40,41 @@ export default class PackageHelper {
     }
 
     public static isAurPackage(packageName: string): Promise<boolean> {
-        // TODO: Figure out why this function randomly errors out without any hints as to what happened
-        console.warn("WARNING: Unstable isAurPackage function is called")
-
         return new Promise(async (resolve, reject) => {
             if (! PackageHelper.isValidPackageName(packageName)) {
+                console.warn(`[isAurPackage] Package ${packageName} is an invalid name`);
+
                 return resolve(false);
             }
 
-            const response = await fetch(`https://aur.archlinux.org/packages/${packageName}`);
+            const urlParams: Record<string, any> = new URLSearchParams();
+
+            urlParams.append('arg', packageName);
+
+            const response = await fetch(`https://aur.archlinux.org/rpc/v5/info?${urlParams.toString()}`);
+            const responseJson: AurRpcApiInfoResponse = await response.json();
 
             if (response.status === 200) {
-                return resolve(true);
-            }
-    
-            if (response.status === 404) {
+                if (responseJson.type === "error") {
+                    reject(`AUR RPC API returned an unexpected result, error "${responseJson.error}"`);
+
+                    return;
+                }
+
+                if (responseJson.resultcount > 1) {
+                    reject(`AUR RPC API returned an ambiguous package when searching for "${packageName}"`);
+
+                    return;
+                }
+
+                if (responseJson.resultcount === 1) {
+                    return resolve(true);
+                }
+
                 return resolve(false);
             }
-    
-            reject(`aur.archlinux.org returned unexpected result, error ${response.status}`);
+
+            return reject(`AUR RPC API returned an unexpected result, error "${response.status}", json: ${JSON.stringify(responseJson)}`);
         });
     }
 
@@ -71,7 +89,7 @@ export default class PackageHelper {
                 console.log(`[buildAurPackage] AUR package ${packageName} directory doesn't seem to exist yet`);
 
                 // Make sure it's a valid AUR package
-                if (false && ! await PackageHelper.isAurPackage(packageName)) {
+                if (! await PackageHelper.isAurPackage(packageName)) {
                     console.error(`[buildAurPackage] isAurPackage reports ${packageName} to not be an existing AUR package!`);
 
                     return reject("Invalid AUR package");
@@ -127,51 +145,72 @@ export default class PackageHelper {
     }
 
     public static installPackage(packageName: string): Promise<void> {
-        console.log(`Installing package "${packageName}"`);
+        return new Promise(async (resolve, reject) => {
+            console.log(`Installing package "${packageName}"`);
 
-        execSync(`sudo pacman -S --noconfirm "${packageName}"`);
+            try {
+                execSync(`sudo pacman -S --noconfirm "${packageName}"`);
+            } catch (e) {
+                console.log(e);
+                reject(e);
 
-        return Promise.resolve();
+                return;
+            }
+
+            resolve();
+        });
     }
 
     public static installAurPackage(aurPackagePath: string): Promise<void> {
-        console.log(`Installing AUR package "${aurPackagePath}"`);
+        return new Promise(async (resolve, reject) => {
+            console.log(`Installing AUR package "${aurPackagePath}"`);
 
-        execSync(`sudo pacman -U --noconfirm "${aurPackagePath}"`);
+            try {
+                execSync(`sudo pacman -U --noconfirm "${aurPackagePath}"`);
+            } catch (e) {
+                reject(e);
 
-        return Promise.resolve();
+                return;
+            }
+
+            resolve();
+        });
     }
 
     // TODO: Give this function a better name
     public static packageDependencyHandler(packageBuildPath: string, packageName: string): Promise<void> {
         return new Promise(async (resolve, reject) => {
-            const isSystemPackage = await PackageHelper.isSystemPackage(packageName);
+            const packageType = await PackageTypeHelper.getPackageTypeByName(packageName);
 
-            if (isSystemPackage) {
+            if (! packageType) {
+                reject(`[PackageDependencyHandler] The package "${packageName}" doesn't seem to exist`);
 
-                console.log(`[PackageDependencyHandler] Installing system package "${packageName}"`);
-                
-                await PackageHelper.installPackage(packageName);
-
-                return resolve();
+                return;
             }
 
-            // const isAurPackage = await PackageHelper.isAurPackage(packageName);
+            if (packageType.type === 'system') {
+                console.log(`[PackageDependencyHandler] Installing system package "${packageType.packageToInstall}"`);
 
-            // if (! isAurPackage) {
-            //     // Seems like this package doesn't exist, as it also isn't in the AUR
+                await PackageHelper.installPackage(packageType.packageToInstall);
 
-            //     return reject();
-            // }
+                resolve();
+                return;
+            }
 
+            if (packageType.type === 'aur') {
+                console.log(`[PackageDependencyHandler] Building and installing AUR package "${packageType.packageToInstall}"`);
 
-            console.log(`[PackageDependencyHandler] Building and installing AUR package "${packageName}"`);
+                const packagePath = await PackageHelper.buildAurPackage(packageBuildPath, packageType.packageToInstall);
+    
+                await PackageHelper.installAurPackage(packagePath);
 
-            const packagePath = await PackageHelper.buildAurPackage(packageBuildPath, packageName);
+                resolve();
+                return;
+            }
 
-            await PackageHelper.installAurPackage(packagePath);
+            reject(`[PackageDependencyHandler] We received "${packageType.type}" as the package type for "${packageName}", but that type is not supported.`);
 
-            return resolve();
+            return;
         });
     }
 }

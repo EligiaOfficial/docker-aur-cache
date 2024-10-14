@@ -61,7 +61,6 @@ export default class MakepkgHelper {
         return `${pkgbuildData.pkgname}-${pkgbuildData.pkgver}-${pkgbuildData.pkgrel}-${architecture}.pkg.tar.zst`;
     }
 
-    // TODO: Handle packages that expect certain versions (Example: "python>=3.3")
     public static getDependsFromPkgbuildData(pkgbuildData: object): Array<string> {
         if (! ("depends" in pkgbuildData)) {
             return [];
@@ -69,7 +68,9 @@ export default class MakepkgHelper {
 
         // If it's only 1 package, it will be interpreted as a field instead of an array
         if (typeof pkgbuildData.depends === "string") {
-            return [pkgbuildData.depends];
+            return MakepkgHelper.removeVersionRequirementsFromPackageNameList(
+                [pkgbuildData.depends]
+            );
         }
 
         // Mostly just in case it some weird value
@@ -77,10 +78,11 @@ export default class MakepkgHelper {
             return [];
         }
 
-        return pkgbuildData.depends;
+        return MakepkgHelper.removeVersionRequirementsFromPackageNameList(
+            pkgbuildData.depends
+        );
     }
 
-    // TODO: Handle packages that expect certain versions (Example: "python>=3.3")
     public static getMakeDependsFromPkgbuildData(pkgbuildData: object): Array<string> {
         if (! ("makedepends" in pkgbuildData)) {
             return [];
@@ -88,7 +90,9 @@ export default class MakepkgHelper {
 
         // If it's only 1 package, it will be interpreted as a field instead of an array
         if (typeof pkgbuildData.makedepends === "string") {
-            return [pkgbuildData.makedepends];
+            return MakepkgHelper.removeVersionRequirementsFromPackageNameList(
+                [pkgbuildData.makedepends]
+            );
         }
 
         // Mostly just in case it some weird value
@@ -96,10 +100,11 @@ export default class MakepkgHelper {
             return [];
         }
 
-        return pkgbuildData.makedepends;
+        return MakepkgHelper.removeVersionRequirementsFromPackageNameList(
+            pkgbuildData.makedepends
+        );
     }
 
-    // TODO: Handle packages that expect certain versions (Example: "python>=3.3")
     public static getCheckDependsFromPkgbuildData(pkgbuildData: object): Array<string> {
         if (! ("checkdepends" in pkgbuildData)) {
             return [];
@@ -107,7 +112,9 @@ export default class MakepkgHelper {
 
         // If it's only 1 package, it will be interpreted as a field instead of an array
         if (typeof pkgbuildData.checkdepends === "string") {
-            return [pkgbuildData.checkdepends];
+            return MakepkgHelper.removeVersionRequirementsFromPackageNameList(
+                [pkgbuildData.checkdepends]
+            );
         }
 
         // Mostly just in case it some weird value
@@ -115,6 +122,20 @@ export default class MakepkgHelper {
             return [];
         }
 
-        return pkgbuildData.checkdepends;
+        return MakepkgHelper.removeVersionRequirementsFromPackageNameList(
+            pkgbuildData.checkdepends
+        );
+    }
+
+    public static removeVersionRequirementsFromPackageNameList(packageNames: Array<string>): Array<string> {
+        return packageNames.map((packageName: string) => {
+            const newPackageName = packageName.split(/(>=|<=|>|<|==)/)[0].trim();
+
+            if (newPackageName !== packageName) {
+                console.warn(`[MakepkgHelper] Found package "${packageName}" which has a version constraint, this version constraint has been stripped as this is not yet supported.`);
+            }
+
+            return newPackageName;
+        });
     }
 }

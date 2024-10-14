@@ -9,7 +9,7 @@ RUN pacman -Syu --noconfirm git base-devel fcron nodejs npm
 RUN useradd -ms /bin/bash builder
 RUN usermod -a -G fcron builder
 RUN chmod o+x /usr/sbin/fcron
-RUN echo "builder ALL=(ALL) NOPASSWD:/usr/bin/pacman -S --noconfirm *, /usr/bin/pacman -U --noconfirm *" >> /etc/sudoers
+RUN echo "builder ALL=(ALL) NOPASSWD:/usr/bin/pacman -S --noconfirm *, /usr/bin/pacman -U --noconfirm *, /usr/bin/pacman -Fy *" >> /etc/sudoers
 USER builder
 RUN mkdir -p /home/builder
 WORKDIR /home/builder
