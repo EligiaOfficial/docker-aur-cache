@@ -9,7 +9,8 @@ export default class ParameterHelper {
         return (
             typeof params.packagelist_path === "string" &&
             typeof params.build_dir === "string" &&
-            typeof params.repository_dir === "string"
+            typeof params.repository_dir === "string" &&
+            typeof params.repository_name === "string"
             // TODO: Implement better validation (path exists, packagelist is valid format etc.)
         );
     }
