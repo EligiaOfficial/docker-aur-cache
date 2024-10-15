@@ -39,7 +39,7 @@ const publishBuildPackages = async () => {
 const handlePackageList = async () => {
     const fileStream = fs.createReadStream(params.packagelist_path);
 
-    // TODO: Replace this with a JSON based configuration file to allow more flexibility (manually selecting the source of a provided packages, forcing clean builds etc)
+    // TODO: Replace this with a JSON based configuration file to allow more flexibility (manually selecting the source of a provided packages, forcing clean builds, running commands beforehand, etc...)
     const rl = readline.createInterface({
         input: fileStream,
         crlfDelay: Infinity

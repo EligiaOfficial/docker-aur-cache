@@ -58,7 +58,13 @@ export default class MakepkgHelper {
             architecture = pkgbuildData.arch[0];
         }
 
-        return `${pkgbuildData.pkgname}-${pkgbuildData.pkgver}-${pkgbuildData.pkgrel}-${architecture}.pkg.tar.zst`;
+        let packageVersion = `${pkgbuildData.pkgver}-${pkgbuildData.pkgrel}`;
+
+        if ("epoch" in pkgbuildData) {
+            packageVersion = `${pkgbuildData.epoch}:${packageVersion}`;
+        }
+
+        return `${pkgbuildData.pkgname}-${packageVersion}-${architecture}.pkg.tar.zst`;
     }
 
     public static getDependsFromPkgbuildData(pkgbuildData: object): Array<string> {

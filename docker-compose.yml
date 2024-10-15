@@ -5,7 +5,7 @@ services:
       dockerfile: ./docker/Dockerfile
     volumes:
       - ./repository:/repository:cached
-      - ./packagelist.txt:/repository-builder/packagelist.txt:cached
+      - ./packagelist.txt:/repository-builder/packagelist.txt:ro
     restart: on-failure
     networks:
       - default
