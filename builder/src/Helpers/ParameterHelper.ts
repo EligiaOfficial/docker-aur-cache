@@ -7,10 +7,9 @@ export default class ParameterHelper {
 
     public static validateRequiredParameters(params: Parameters): boolean {
         return (
-            typeof params.packagelist_path === "string" &&
+            typeof params.package === "string" &&
             typeof params.build_dir === "string" &&
-            typeof params.repository_dir === "string" &&
-            typeof params.repository_name === "string"
+            typeof params.package_staging_dir === "string"
             // TODO: Implement better validation (path exists, packagelist is valid format etc.)
         );
     }

@@ -1,6 +1,5 @@
 export default interface Parameters {
-    packagelist_path: string
+    package: string
     build_dir: string
-    repository_dir: string
-    repository_name: string
+    package_staging_dir: string
 };

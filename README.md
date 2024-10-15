@@ -13,10 +13,13 @@ Docker image that automatically builds AUR packages and hosts them for faster in
 5. Update the repository permissions with `chmod 777 ./repository`
     - **Note:** We are aware that this isn't very secure, this will be improved in the future.
 6. Build the container with `docker compose build`
+7. Start the container with `docker compose up -d`
+8. Set the right permissions with `docker compose exec build-manager chown builder /package-staging`
 
 _**TODO:** Add instructions about a .env file, so the user can configure the domain and docker GID if needed_
 
-The container should now be ready, simply start it with `docker compose up -d` and try visiting your domain!
+The container should now be ready, try visiting your domain and you should see a index page!
+This page will also show packages that are available for downloading.
 
 > [!INFO]
 > Normally you would have to wait until Sunday @ 01:00 for it to start building, but instructions are available in case you want to start the build immediately.

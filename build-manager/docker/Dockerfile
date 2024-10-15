@@ -6,7 +6,7 @@ RUN pacman-key --init
 RUN pacman -Syu --noconfirm fcron nodejs npm docker
 
 # Create the builder user
-RUN useradd -ms /bin/bash builder
+RUN useradd -u 1000 -ms /bin/bash builder
 RUN usermod -a -G fcron builder
 RUN chmod o+x /usr/sbin/fcron
 USER builder

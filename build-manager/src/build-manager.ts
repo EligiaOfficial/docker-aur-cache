@@ -1,9 +1,11 @@
 import fs from 'fs';
 import readline from 'readline';
 import Docker from 'dockerode';
-import ParameterHelper from './Helpers/ParameterHelper';
-import DockerHelper from './Helpers/DockerHelper';
 import { execSync } from 'child_process';
+import ParameterHelper from './Helpers/ParameterHelper';
+import BuilderHelper from './Helpers/BuilderHelper';
+import DockerHelper from './Helpers/DockerHelper';
+import TimeHelper from './Helpers/TimeHelper';
 
 const params = ParameterHelper.getParameters();
 const docker = new Docker({socketPath: '/var/run/docker.sock'});
@@ -14,16 +16,16 @@ if (! ParameterHelper.validateRequiredParameters(params)) {
     process.exit(1);
 }
 
-console.log(`Builder image name: ${params.builder_image_name}`);
-console.log(`Packagelist path: ${params.packagelist_path}`);
-console.log(`Builder directory: ${params.builder_dir}`);
-console.log(`Repository directory: ${params.repository_dir}`);
-console.log(`Repository name: ${params.repository_name}`);
+console.log(`[build-manager] Builder image name: ${params.builder_image_name}`);
+console.log(`[build-manager] Packagelist path: ${params.packagelist_path}`);
+console.log(`[build-manager] Builder directory: ${params.builder_dir}`);
+console.log(`[build-manager] Repository directory: ${params.repository_dir}`);
+console.log(`[build-manager] Repository name: ${params.repository_name}`);
 
 
 
 const removeOldDockerImage = async () => {
-    console.log("[Builder] Removing old builder Docker images");
+    console.log("[build-manager] Removing old builder Docker images");
 
     const dockerImages = await docker.listImages({
         filters: {
@@ -34,16 +36,16 @@ const removeOldDockerImage = async () => {
     });
 
     dockerImages.forEach(dockerImage => {
-        console.log(`[Builder] Removing Docker image ID ${dockerImage.Id}`);
+        console.log(`[build-manager] Removing Docker image ID ${dockerImage.Id}`);
 
         docker.getImage(dockerImage.Id).remove({ force: true })
     });
 
-    console.log("[Builder] Old builder Docker images have been removed");
+    console.log("[build-manager] Old builder Docker images have been removed");
 }
 
 const buildNewDockerImage = async () => {
-    console.log("[Builder] Building a fresh builder Docker image");
+    console.log("[build-manager] Building a fresh builder Docker image");
 
     const buildSteam = await docker.buildImage(
         {
@@ -77,23 +79,51 @@ const buildNewDockerImage = async () => {
         );
     });
 
-    console.log("[Builder] Builder Docker image is ready!");
+    console.log("[build-manager] Builder Docker image is ready!");
+}
+
+const stopAllBuilderInstances = async () => {
+    console.log("[build-manager] Stopping old builder containers");
+
+    const dockerImages = await docker.listImages({
+        filters: {
+            reference: [
+                params.builder_image_name
+            ]
+        }
+    });
+
+    const containers = await docker.listContainers();
+
+    for (const dockerImage of dockerImages) {
+        for (const container of containers) {
+            if (container.ImageID === dockerImage.Id) {
+                console.log(`[build-manager] Stopping container ${container.Id}`);
+
+                await docker.getContainer(container.Id).remove({ force: true });
+            }
+        }
+    }
+
+    console.log("[build-manager] Old builder containers have been stopped");
 }
 
 const moveOldPackagesToArchive = async () => {
-    console.log("[Builder] Moving old packages to the archive");
+    console.log("[build-manager] Moving old packages to the archive");
 
     // TODO: Implement this
+
+    console.log("[build-manager] Old packages have been archived");
 }
 
 const publishBuildPackages = async () => {
-    console.log("[Builder] Copying new packages");
-    execSync(`cp ${params.package_staging_dir}/**/*.pkg.tar.zst ${params.repository_dir}/`);
+    console.log("[build-manager] Copying new packages");
+    execSync(`mv ${params.package_staging_dir}/*.pkg.tar.zst ${params.repository_dir}/`);
 
-    console.log("[Builder] Removing old database (if it exists)");
+    console.log("[build-manager] Removing old database (if it exists)");
     execSync(`rm -f ${params.repository_dir}/${params.repository_name}.db* ${params.repository_dir}/${params.repository_name}.files*`);
 
-    console.log("[Builder] Adding packages to database");
+    console.log("[build-manager] Adding packages to database");
     execSync(`repo-add ${params.repository_dir}/${params.repository_name}.db.tar.gz ${params.repository_dir}/*.pkg.tar.zst`);
 }
 
@@ -107,30 +137,67 @@ const handlePackageList = async () => {
     });
 
     for await (const packageName of rl) {
-        console.log(`[Builder] Processing "${packageName}"`);
+        console.log(`[build-manager] Processing "${packageName}"`);
 
-        console.log('TODO: Implement building via the builder container');
+        const packageBuildStartTime = new Date();
 
-        console.log(`[Builder] Done processing "${packageName}"`);
+        try {
+            const command = BuilderHelper.getBuilderStartCommand(packageName);
+
+            console.log(`[build-manager] Starting the container with the following command: ${command}`);
+
+            const container = await docker.createContainer({
+                Image: params.builder_image_name,
+                AttachStdout: true,
+                AttachStderr: true,
+                User: 'builder',
+                Cmd: ['/bin/bash', '-c', command],
+                HostConfig: {
+                    Mounts: BuilderHelper.getBuilderMounts()
+                }
+            });
+
+            await container.start();
+
+            container.attach({stream: true, stdout: true, stderr: true}, function (_, stream) {
+                container.modem.demuxStream(stream, process.stdout, process.stderr);
+            });
+
+            // Wait for the container to finish it's job
+            await container.wait();
+
+            await container.remove();
+        } catch (e) {
+            console.error(`[build-manager] Something went wrong while building`, e);
+
+            // We are not sure if the container also stopped properly
+            // So with this we are sure that no builders are still running
+            await stopAllBuilderInstances();
+        }
+
+        const packageBuildEndTime = new Date();
+        const formattedTime = TimeHelper.getFormattedTimeDifference(packageBuildStartTime, packageBuildEndTime);
+
+        console.log(`[build-manager] Done processing "${packageName}", Building took ${formattedTime}`);
     }
 }
 
 const startBuilding = async () => {
+    await stopAllBuilderInstances();
     await removeOldDockerImage();
     await buildNewDockerImage();
 
-    //await handlePackageList();
+    await handlePackageList();
 
-    //await moveOldPackagesToArchive();
-    //await publishBuildPackages();
+    await moveOldPackagesToArchive();
+    await publishBuildPackages();
 }
 
 const startTime = new Date();
 
 startBuilding().then(() => {
     const endTime = new Date();
-    const timeDiff = endTime.getTime() - startTime.getTime();
-    const formattedTime = timeDiff / 1000;
+    const formattedTime = TimeHelper.getFormattedTimeDifference(startTime, endTime);
 
-    console.log(`[Builder] We are done here! Building took ${formattedTime} seconds`);
+    console.log(`[build-manager] We are done here! Building took ${formattedTime}`);
 });

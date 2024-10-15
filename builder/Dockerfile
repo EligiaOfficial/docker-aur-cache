@@ -6,7 +6,7 @@ RUN pacman-key --init
 RUN pacman -Syu --noconfirm git base-devel fcron nodejs npm
 
 # Create the builder user
-RUN useradd -ms /bin/bash builder
+RUN useradd -u 1000 -ms /bin/bash builder
 RUN usermod -a -G fcron builder
 RUN chmod o+x /usr/sbin/fcron
 RUN echo "builder ALL=(ALL) NOPASSWD:/usr/bin/pacman -S --noconfirm *, /usr/bin/pacman -U --noconfirm *, /usr/bin/pacman -Fy *" >> /etc/sudoers
