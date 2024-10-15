@@ -1,5 +1,0 @@
-# Automatically update the container (Sunday @ 00:00)
-0 0 * * 0 root /usr/bin/pacman -Syu --noconfirm
-
-# TODO: Automatically clean up the pacman cached packages to prevent using too many resources
-# TODO: Migrate the actual build process over to standalone containers, so we can update the Arch Linux install automatically and make the entire container less fragile

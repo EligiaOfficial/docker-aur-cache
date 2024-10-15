@@ -1,11 +1,15 @@
 services:
-  builder:
+  build-manager:
     build:
       context: ./
-      dockerfile: ./docker/Dockerfile
+      dockerfile: ./build-manager/docker/Dockerfile
+      args:
+        - DOCKER_GID=964
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./repository:/repository:cached
       - ./packagelist.txt:/repository-builder/packagelist.txt:ro
+      - package-staging:/package-staging
     restart: on-failure
     networks:
       - default
@@ -25,6 +29,9 @@ services:
       - "traefik.http.routers.docker-aur-cache-nginx.rule=Host(`${BASE_URL:-docker-aur-cache.localhost}`)"
       - "traefik.http.routers.docker-aur-cache-nginx.entrypoints=http"
       - "traefik.http.routers.docker-aur-cache-nginx.tls=false"
+
+volumes:
+  package-staging:
 
 # You can find the Traefik reverse proxy container on GitHub
 # https://github.com/CrazyVito11/traefik-reverse-proxy

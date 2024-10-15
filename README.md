@@ -14,6 +14,8 @@ Docker image that automatically builds AUR packages and hosts them for faster in
     - **Note:** We are aware that this isn't very secure, this will be improved in the future.
 6. Build the container with `docker compose build`
 
+_**TODO:** Add instructions about a .env file, so the user can configure the domain and docker GID if needed_
+
 The container should now be ready, simply start it with `docker compose up -d` and try visiting your domain!
 
 > [!INFO]
@@ -39,7 +41,7 @@ Simply perform a full system update and you should be able to install packages t
 ### Force the build immediately
 If you want the container to start building right now, you can run these commands to accomplish that:
 
-1. `docker compose exec --user builder builder bash`
+1. `docker compose exec --user builder build-manager bash`
 2. `./build-packages.sh`
 
 It should now start building your packages, wait for this process to finish and then you can install the packages you configured.
