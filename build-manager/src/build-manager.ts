@@ -108,6 +108,16 @@ const stopAllBuilderInstances = async () => {
     console.log("[build-manager] Old builder containers have been stopped");
 }
 
+const prepareAurPackageList = async (): Promise<string> => {
+    console.log("[build-manager] Preparing the AUR package list");
+
+    execSync(`cd /tmp; curl https://aur.archlinux.org/packages-meta-ext-v1.json.gz -O; gzip -d packages-meta-ext-v1.json.gz; ls -al packages-meta-ext-v1.json`);
+
+    console.log("[build-manager] The AUR package list is ready");
+
+    return '/tmp/packages-meta-ext-v1.json';
+}
+
 const moveOldPackagesToArchive = async () => {
     console.log("[build-manager] Moving old packages to the archive");
 
@@ -117,8 +127,15 @@ const moveOldPackagesToArchive = async () => {
 }
 
 const publishBuildPackages = async () => {
-    console.log("[build-manager] Copying new packages");
-    execSync(`mv ${params.package_staging_dir}/*.pkg.tar.zst ${params.repository_dir}/`);
+    try {
+        console.log("[build-manager] Copying new packages");
+        execSync(`mv ${params.package_staging_dir}/*.pkg.tar.zst ${params.repository_dir}/`);
+    } catch (e) {
+        console.warn(`[build-manager] Unable to move packages, maybe there are no packages available?`);
+        console.warn(e);
+
+        return;
+    }
 
     console.log("[build-manager] Removing old database (if it exists)");
     execSync(`rm -f ${params.repository_dir}/${params.repository_name}.db* ${params.repository_dir}/${params.repository_name}.files*`);
@@ -127,7 +144,7 @@ const publishBuildPackages = async () => {
     execSync(`repo-add ${params.repository_dir}/${params.repository_name}.db.tar.gz ${params.repository_dir}/*.pkg.tar.zst`);
 }
 
-const handlePackageList = async () => {
+const handlePackageList = async (aurPackageListPath: string) => {
     const fileStream = fs.createReadStream(params.packagelist_path);
 
     // TODO: Replace this with a JSON based configuration file to allow more flexibility (manually selecting the source of a provided packages, forcing clean builds, running commands beforehand, etc...)
@@ -142,7 +159,7 @@ const handlePackageList = async () => {
         const packageBuildStartTime = new Date();
 
         try {
-            const command = BuilderHelper.getBuilderStartCommand(packageName);
+            const command = BuilderHelper.getBuilderStartCommand(aurPackageListPath, packageName);
 
             console.log(`[build-manager] Starting the container with the following command: ${command}`);
 
@@ -153,7 +170,7 @@ const handlePackageList = async () => {
                 User: 'builder',
                 Cmd: ['/bin/bash', '-c', command],
                 HostConfig: {
-                    Mounts: BuilderHelper.getBuilderMounts()
+                    Mounts: BuilderHelper.getBuilderMounts(aurPackageListPath)
                 }
             });
 
@@ -168,6 +185,7 @@ const handlePackageList = async () => {
 
             await container.remove();
         } catch (e) {
+            // TODO: Collect as much information as possible about the error and then write it to a report (in HTML maybe?)
             console.error(`[build-manager] Something went wrong while building`, e);
 
             // We are not sure if the container also stopped properly
@@ -183,11 +201,13 @@ const handlePackageList = async () => {
 }
 
 const startBuilding = async () => {
+    const aurPackageListPath = await prepareAurPackageList();
+
     await stopAllBuilderInstances();
     await removeOldDockerImage();
     await buildNewDockerImage();
 
-    await handlePackageList();
+    await handlePackageList(aurPackageListPath);
 
     await moveOldPackagesToArchive();
     await publishBuildPackages();

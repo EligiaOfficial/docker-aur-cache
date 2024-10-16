@@ -13,6 +13,7 @@ if (! ParameterHelper.validateRequiredParameters(params)) {
 console.log(`Package: ${params.package}`);
 console.log(`Build directory: ${params.build_dir}`);
 console.log(`Package staging directory: ${params.package_staging_dir}`);
+console.log(`AUR package list path: ${params.aur_package_list_path}`);
 
 
 
@@ -25,7 +26,7 @@ const buildPackage = async (packageName: string) => {
     console.log(`[Builder] Processing "${packageName}"`);
 
     await PackageHelper.packageDependencyHandler(
-        params.build_dir,
+        params,
         packageName
     );
 

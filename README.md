@@ -21,7 +21,7 @@ _**TODO:** Add instructions about a .env file, so the user can configure the dom
 The container should now be ready, try visiting your domain and you should see a index page!
 This page will also show packages that are available for downloading.
 
-> [!INFO]
+> [!TIP]
 > Normally you would have to wait until Sunday @ 01:00 for it to start building, but instructions are available in case you want to start the build immediately.
 > See the section **Force the build immediately** for more information.
 

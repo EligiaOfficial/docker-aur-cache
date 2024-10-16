@@ -1,4 +1,5 @@
 import { execSync } from "child_process";
+import Parameters from "../Types/Parameters";
 import PackageType from "../Types/PackageType";
 import PackageHelper from "./PackageHelper";
 import PackageApiSearchApiResponse from "../Types/PackageApiSearchApiReponse";
@@ -7,7 +8,7 @@ import PackageApiPackage from "../Types/PackageApiPackage";
 export default class PackageTypeHelper {
     private static pacmanPackageProvideSearchPackageNameRegex = new RegExp(/^[a-z]+\/([0-9a-z\-\_]+) .+$/m);
 
-    public static getPackageTypeByName(packageName: string): Promise<PackageType | null> {
+    public static getPackageTypeByName(params: Parameters, packageName: string): Promise<PackageType | null> {
         return new Promise(async (resolve) => {
 
             const systemResult = await PackageTypeHelper.checkSystemPackageViaPacman(packageName);
@@ -17,7 +18,7 @@ export default class PackageTypeHelper {
                 return;
             }
 
-            const aurResult = await PackageTypeHelper.checkAURPackage(packageName);
+            const aurResult = await PackageTypeHelper.checkAURPackage(params, packageName);
             if (aurResult) {
                 resolve(aurResult);
 
@@ -65,8 +66,8 @@ export default class PackageTypeHelper {
         return null;
     }
 
-    private static async checkAURPackage(packageName: string): Promise<PackageType | null> {
-        const result = await PackageHelper.isAurPackage(packageName);
+    private static async checkAURPackage(params: Parameters, packageName: string): Promise<PackageType | null> {
+        const result = await PackageHelper.isAurPackage(params, packageName);
 
         if (result) {
             return {

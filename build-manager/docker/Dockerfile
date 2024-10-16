@@ -1,9 +1,8 @@
 FROM --platform=linux/amd64 archlinux:multilib-devel
 
 # Update the image and install dependencies
-# TODO: Install NVM instead of NodeJS
 RUN pacman-key --init
-RUN pacman -Syu --noconfirm fcron nodejs npm docker
+RUN pacman -Syu --noconfirm fcron nodejs-lts-iron npm docker
 
 # Create the builder user
 RUN useradd -u 1000 -ms /bin/bash builder

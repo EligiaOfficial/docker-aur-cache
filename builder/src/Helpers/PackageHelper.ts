@@ -1,8 +1,10 @@
 import { execSync } from "child_process";
-import { existsSync } from "fs";
+import fs from "fs";
 import MakepkgHelper from "./MakepkgHelper";
+import Parameters from "../Types/Parameters";
 import AurRpcApiInfoResponse from "../Types/AurRpcApiInfoResponse";
 import PackageTypeHelper from "./PackageTypeHelper";
+import AurRpcApiPackage from "../Types/AurRpcApiPackage";
 
 export default class PackageHelper {
     private static validPackageNameRegex = new RegExp(/^[a-z0-9\-_]+$/);
@@ -39,7 +41,7 @@ export default class PackageHelper {
         });
     }
 
-    public static isAurPackage(packageName: string): Promise<boolean> {
+    public static isAurPackage(params: Parameters, packageName: string): Promise<boolean> {
         return new Promise(async (resolve, reject) => {
             if (! PackageHelper.isValidPackageName(packageName)) {
                 console.warn(`[isAurPackage] Package ${packageName} is an invalid name`);
@@ -47,49 +49,29 @@ export default class PackageHelper {
                 return resolve(false);
             }
 
-            const urlParams: Record<string, any> = new URLSearchParams();
+            const jsonRaw = fs.readFileSync(params.aur_package_list_path, 'utf8');
+            const jsonParsed: Array<AurRpcApiPackage> = JSON.parse(jsonRaw);
 
-            urlParams.append('arg', packageName);
+            const foundPackage = !! jsonParsed.find((packageItem) => packageItem.Name === packageName);
 
-            const response = await fetch(`https://aur.archlinux.org/rpc/v5/info?${urlParams.toString()}`);
-            const responseJson: AurRpcApiInfoResponse = await response.json();
+            resolve(foundPackage);
 
-            if (response.status === 200) {
-                if (responseJson.type === "error") {
-                    reject(`AUR RPC API returned an unexpected result, error "${responseJson.error}"`);
-
-                    return;
-                }
-
-                if (responseJson.resultcount > 1) {
-                    reject(`AUR RPC API returned an ambiguous package when searching for "${packageName}"`);
-
-                    return;
-                }
-
-                if (responseJson.resultcount === 1) {
-                    return resolve(true);
-                }
-
-                return resolve(false);
-            }
-
-            return reject(`AUR RPC API returned an unexpected result, error "${response.status}", json: ${JSON.stringify(responseJson)}`);
+            return;
         });
     }
 
-    public static buildAurPackage(packageBuildPath: string, packageName: string): Promise<string> {
+    public static buildAurPackage(params: Parameters, packageName: string): Promise<string> {
         return new Promise(async (resolve, reject) => {
-            const fullPackagePath = `${packageBuildPath}/${packageName}`;
+            const fullPackagePath = `${params.build_dir}/${packageName}`;
 
-            console.log(`[buildAurPackage] Path: ${packageBuildPath}, Package: ${packageName}`);
+            console.log(`[buildAurPackage] Path: ${params.build_dir}, Package: ${packageName}`);
 
             // Clone the package if it doesn't exist yet
-            if (! existsSync(fullPackagePath)) {
+            if (! fs.existsSync(fullPackagePath)) {
                 console.log(`[buildAurPackage] AUR package ${packageName} directory doesn't seem to exist yet`);
 
                 // Make sure it's a valid AUR package
-                if (! await PackageHelper.isAurPackage(packageName)) {
+                if (! await PackageHelper.isAurPackage(params, packageName)) {
                     console.error(`[buildAurPackage] isAurPackage reports ${packageName} to not be an existing AUR package!`);
 
                     return reject("Invalid AUR package");
@@ -97,7 +79,7 @@ export default class PackageHelper {
 
                 console.log(`[buildAurPackage] Cloning AUR package ${packageName}`);
 
-                execSync(`cd "${packageBuildPath}"; git clone https://aur.archlinux.org/${packageName}.git`);
+                execSync(`cd "${params.build_dir}"; git clone https://aur.archlinux.org/${packageName}.git`);
             }
 
             console.log(`[buildAurPackage] Updating AUR package ${packageName}`);
@@ -114,19 +96,19 @@ export default class PackageHelper {
 
             await Promise.all(
                 makeDependsPackages.map((dependencyPackageName: string) => 
-                    PackageHelper.packageDependencyHandler(packageBuildPath, dependencyPackageName)
+                    PackageHelper.packageDependencyHandler(params, dependencyPackageName)
                 )
             );
 
             await Promise.all(
                 checkDependsPackages.map((dependencyPackageName: string) => 
-                    PackageHelper.packageDependencyHandler(packageBuildPath, dependencyPackageName)
+                    PackageHelper.packageDependencyHandler(params, dependencyPackageName)
                 )
             );
 
             await Promise.all(
                 dependsPackages.map((dependencyPackageName: string) => 
-                    PackageHelper.packageDependencyHandler(packageBuildPath, dependencyPackageName)
+                    PackageHelper.packageDependencyHandler(params, dependencyPackageName)
                 )
             );
 
@@ -136,7 +118,7 @@ export default class PackageHelper {
             const compiledPackageFilePath = `${fullPackagePath}/${compiledPackageFilename}`
 
             // Double check that the file exist, as the name is "guessed"
-            if (! existsSync(compiledPackageFilePath)) {
+            if (! fs.existsSync(compiledPackageFilePath)) {
                 return reject(`Build package file "${compiledPackageFilePath}" doesn't seem to exist`);
             }
 
@@ -178,9 +160,9 @@ export default class PackageHelper {
     }
 
     // TODO: Give this function a better name
-    public static packageDependencyHandler(packageBuildPath: string, packageName: string): Promise<void> {
+    public static packageDependencyHandler(params: Parameters, packageName: string): Promise<void> {
         return new Promise(async (resolve, reject) => {
-            const packageType = await PackageTypeHelper.getPackageTypeByName(packageName);
+            const packageType = await PackageTypeHelper.getPackageTypeByName(params, packageName);
 
             if (! packageType) {
                 reject(`[PackageDependencyHandler] The package "${packageName}" doesn't seem to exist`);
@@ -200,7 +182,7 @@ export default class PackageHelper {
             if (packageType.type === 'aur') {
                 console.log(`[PackageDependencyHandler] Building and installing AUR package "${packageType.packageToInstall}"`);
 
-                const packagePath = await PackageHelper.buildAurPackage(packageBuildPath, packageType.packageToInstall);
+                const packagePath = await PackageHelper.buildAurPackage(params, packageType.packageToInstall);
     
                 await PackageHelper.installAurPackage(packagePath);
 
