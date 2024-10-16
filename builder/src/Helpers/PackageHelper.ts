@@ -2,7 +2,6 @@ import { execSync } from "child_process";
 import fs from "fs";
 import MakepkgHelper from "./MakepkgHelper";
 import Parameters from "../Types/Parameters";
-import AurRpcApiInfoResponse from "../Types/AurRpcApiInfoResponse";
 import PackageTypeHelper from "./PackageTypeHelper";
 import AurRpcApiPackage from "../Types/AurRpcApiPackage";
 
@@ -17,7 +16,7 @@ export default class PackageHelper {
     public static isSystemPackage(packageName: string): Promise<boolean> {
         return new Promise(async (resolve, reject) => {
             if (! PackageHelper.isValidPackageName(packageName)) {
-                console.warn(`[IsSystemPackage] Package ${packageName} is an invalid name`);
+                console.warn(`[builder] System package "${packageName}" has an invalid name`);
 
                 return resolve(false);
             }
@@ -32,7 +31,7 @@ export default class PackageHelper {
 
                 // Check if the error is it telling us the package doesn't exist
                 if (errorStatus === 1 && PackageHelper.packageNotFoundRegex.test(errorOutput)) {
-                    console.warn(`[IsSystemPackage] Package ${packageName} doesn't exist`);
+                    console.warn(`[builder] System package ${packageName} doesn't exist`);
                     return resolve(false);
                 }
 
@@ -44,7 +43,7 @@ export default class PackageHelper {
     public static isAurPackage(params: Parameters, packageName: string): Promise<boolean> {
         return new Promise(async (resolve, reject) => {
             if (! PackageHelper.isValidPackageName(packageName)) {
-                console.warn(`[isAurPackage] Package ${packageName} is an invalid name`);
+                console.warn(`[builder] AUR package "${packageName}" has an invalid name`);
 
                 return resolve(false);
             }
@@ -64,25 +63,25 @@ export default class PackageHelper {
         return new Promise(async (resolve, reject) => {
             const fullPackagePath = `${params.build_dir}/${packageName}`;
 
-            console.log(`[buildAurPackage] Path: ${params.build_dir}, Package: ${packageName}`);
+            console.log(`[builder] Path: ${params.build_dir}, Package: ${packageName}`);
 
             // Clone the package if it doesn't exist yet
             if (! fs.existsSync(fullPackagePath)) {
-                console.log(`[buildAurPackage] AUR package ${packageName} directory doesn't seem to exist yet`);
+                console.log(`[builder] AUR package ${packageName} directory doesn't seem to exist yet`);
 
                 // Make sure it's a valid AUR package
                 if (! await PackageHelper.isAurPackage(params, packageName)) {
-                    console.error(`[buildAurPackage] isAurPackage reports ${packageName} to not be an existing AUR package!`);
+                    console.error(`[builder] isAurPackage reports ${packageName} to not be an existing AUR package!`);
 
                     return reject("Invalid AUR package");
                 }
 
-                console.log(`[buildAurPackage] Cloning AUR package ${packageName}`);
+                console.log(`[builder] Cloning AUR package ${packageName}`);
 
                 execSync(`cd "${params.build_dir}"; git clone https://aur.archlinux.org/${packageName}.git`);
             }
 
-            console.log(`[buildAurPackage] Updating AUR package ${packageName}`);
+            console.log(`[builder] Updating AUR package ${packageName}`);
 
             // Update the AUR package
             execSync(`cd "${fullPackagePath}"; git pull`);
@@ -96,19 +95,19 @@ export default class PackageHelper {
 
             await Promise.all(
                 makeDependsPackages.map((dependencyPackageName: string) => 
-                    PackageHelper.packageDependencyHandler(params, dependencyPackageName)
+                    PackageHelper.installPackage(params, dependencyPackageName)
                 )
             );
 
             await Promise.all(
                 checkDependsPackages.map((dependencyPackageName: string) => 
-                    PackageHelper.packageDependencyHandler(params, dependencyPackageName)
+                    PackageHelper.installPackage(params, dependencyPackageName)
                 )
             );
 
             await Promise.all(
                 dependsPackages.map((dependencyPackageName: string) => 
-                    PackageHelper.packageDependencyHandler(params, dependencyPackageName)
+                    PackageHelper.installPackage(params, dependencyPackageName)
                 )
             );
 
@@ -126,9 +125,9 @@ export default class PackageHelper {
         });
     }
 
-    public static installPackage(packageName: string): Promise<void> {
+    public static installSystemPackage(packageName: string): Promise<void> {
         return new Promise(async (resolve, reject) => {
-            console.log(`Installing package "${packageName}"`);
+            console.log(`[builder] Installing package "${packageName}"`);
 
             try {
                 execSync(`sudo pacman -S --noconfirm "${packageName}"`);
@@ -145,7 +144,7 @@ export default class PackageHelper {
 
     public static installAurPackage(aurPackagePath: string): Promise<void> {
         return new Promise(async (resolve, reject) => {
-            console.log(`Installing AUR package "${aurPackagePath}"`);
+            console.log(`[builder] Installing AUR package "${aurPackagePath}"`);
 
             try {
                 execSync(`sudo pacman -U --noconfirm "${aurPackagePath}"`);
@@ -159,28 +158,38 @@ export default class PackageHelper {
         });
     }
 
-    // TODO: Give this function a better name
-    public static packageDependencyHandler(params: Parameters, packageName: string): Promise<void> {
+    public static installPackage(params: Parameters, packageName: string): Promise<void> {
         return new Promise(async (resolve, reject) => {
-            const packageType = await PackageTypeHelper.getPackageTypeByName(params, packageName);
+            const packageConfiguration = params.package_configuration;
+            let realPackageName = packageName;
+
+
+            if (packageConfiguration.resolveDependenciesAs && packageName in packageConfiguration.resolveDependenciesAs) {
+                realPackageName = packageConfiguration.resolveDependenciesAs[packageName];
+
+                console.warn(`[builder] Package "${packageName}" has been mapped to "${realPackageName}" in the packagelist, using the configured package instead`);
+            }
+
+
+            const packageType = await PackageTypeHelper.getPackageTypeByName(params, realPackageName);
 
             if (! packageType) {
-                reject(`[PackageDependencyHandler] The package "${packageName}" doesn't seem to exist`);
+                reject(`[builder] The package "${realPackageName}" doesn't seem to exist`);
 
                 return;
             }
 
             if (packageType.type === 'system') {
-                console.log(`[PackageDependencyHandler] Installing system package "${packageType.packageToInstall}"`);
+                console.log(`[builder] Installing system package "${packageType.packageToInstall}"`);
 
-                await PackageHelper.installPackage(packageType.packageToInstall);
+                await PackageHelper.installSystemPackage(packageType.packageToInstall);
 
                 resolve();
                 return;
             }
 
             if (packageType.type === 'aur') {
-                console.log(`[PackageDependencyHandler] Building and installing AUR package "${packageType.packageToInstall}"`);
+                console.log(`[builder] Building and installing AUR package "${packageType.packageToInstall}"`);
 
                 const packagePath = await PackageHelper.buildAurPackage(params, packageType.packageToInstall);
     
@@ -190,7 +199,7 @@ export default class PackageHelper {
                 return;
             }
 
-            reject(`[PackageDependencyHandler] We received "${packageType.type}" as the package type for "${packageName}", but that type is not supported.`);
+            reject(`[builder] We received "${packageType.type}" as the package type for "${realPackageName}", but that type is not supported.`);
 
             return;
         });

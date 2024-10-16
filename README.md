@@ -1,6 +1,7 @@
 # Docker AUR Cache
 Docker image that automatically builds AUR packages and hosts them for faster installation on client devices.
 
+
 ## Setup (Container)
 1. Make sure you meet the follow prerequisites
     - Docker + Docker Compose have been installed
@@ -8,8 +9,9 @@ Docker image that automatically builds AUR packages and hosts them for faster in
     - A registered domain name
         - You can use something like [PiHole](https://github.com/pi-hole/pi-hole) to register local domains if you aren't going to host it publicly
 2. Clone this repository to your server
-3. Make a copy of `packagelist.txt.example` and call it `packagelist.txt`
-4. Add the packages you want to provide to the `packagelist.txt` file
+3. Make a copy of `packagelist.json.example` and call it `packagelist.json`
+4. Add the packages you want to provide to the `packagelist.json` file
+    - You can find documentation about this file at section **Configure packagelist**.
 5. Update the repository permissions with `chmod 777 ./repository`
     - **Note:** We are aware that this isn't very secure, this will be improved in the future.
 6. Build the container with `docker compose build`
@@ -25,6 +27,7 @@ This page will also show packages that are available for downloading.
 > Normally you would have to wait until Sunday @ 01:00 for it to start building, but instructions are available in case you want to start the build immediately.
 > See the section **Force the build immediately** for more information.
 
+
 ## Setup (Client)
 To configure Pacman to use your self-hosted repository, open your `/etc/pacman.conf` file and add the following repository:
 
@@ -39,6 +42,23 @@ Server = http://docker-aur-cache.localhost/
 
 And that should be it!
 Simply perform a full system update and you should be able to install packages that are hosted by your instance.
+
+
+## Configure packagelist
+The `packagelist.json` file is a JSON formatted file that will be used to configure which packages you want to build, and the specific tweaks they might need to build properly.
+Each package that you want to build, will be it's own object inside the array.
+
+### Package object description
+| **Field**                | **Required** | **Type**               | **Description**                                                                                                            |
+|--------------------------|--------------|------------------------|----------------------------------------------------------------------------------------------------------------------------|
+| `packageName`            | Yes          | `string`               | Defines the name of the AUR package that should be build.                                                                  |
+| `resolveDependenciesAs`  | No           | `object`               | A key-value mapping where the key is the original dependency, and the value is the replacement package that should be used.|
+| `runCommandsBeforeBuild` | No           | `array of strings`     | An array of shell commands to be executed before the package build process starts.                                         |
+
+> [!TIP]
+> The build process is executed in a separate container for each AUR package, which is destroyed after the build is complete.
+> If you for example run a command for `package-a` to import a key that `package-b` will also need, you will have to add that command also to the configuration of `package-b`.
+
 
 ## Tips
 ### Force the build immediately

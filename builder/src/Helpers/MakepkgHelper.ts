@@ -138,7 +138,7 @@ export default class MakepkgHelper {
             const newPackageName = packageName.split(/(>=|<=|>|<|==)/)[0].trim();
 
             if (newPackageName !== packageName) {
-                console.warn(`[MakepkgHelper] Found package "${packageName}" which has a version constraint, this version constraint has been stripped as this is not yet supported.`);
+                console.warn(`[builder] Found package "${packageName}" which has a version constraint, this version constraint has been stripped as this is not yet supported.`);
             }
 
             return newPackageName;

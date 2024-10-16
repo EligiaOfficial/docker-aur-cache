@@ -28,7 +28,7 @@ export default class PackageTypeHelper {
             const providesResultPacman = await PackageTypeHelper.checkPackageProvidesViaPacman(packageName);
             if (providesResultPacman) {
                 if (providesResultPacman.packageToInstall !== packageName) {
-                    console.warn(`[PackageTypeHelper] Package "${packageName}" is provided by another package according to Pacman, determined "${providesResultPacman.packageToInstall}" to be the best match`);
+                    console.warn(`[builder] Package "${packageName}" is provided by another package according to Pacman, determined "${providesResultPacman.packageToInstall}" to be the best match`);
                 }
 
                 resolve(providesResultPacman);
@@ -39,7 +39,7 @@ export default class PackageTypeHelper {
             const providesResultApi = await PackageTypeHelper.checkPackageProvidesViaApi(packageName);
             if (providesResultApi) {
                 if (providesResultApi.packageToInstall !== packageName) {
-                    console.warn(`[PackageTypeHelper] Package "${packageName}" is provided by another package according to the API, determined "${providesResultApi.packageToInstall}" to be the best match`);
+                    console.warn(`[builder] Package "${packageName}" is provided by another package according to the API, determined "${providesResultApi.packageToInstall}" to be the best match`);
                 }
 
                 resolve(providesResultApi);
@@ -93,7 +93,7 @@ export default class PackageTypeHelper {
                 packageToInstall: foundPackage[1]
             };
         } catch (e) {
-            console.error(`Unable to search for the binary file "${binaryName}"`);
+            console.error(`[builder] Unable to search for the binary file "${binaryName}"`);
 
             return null;
         }

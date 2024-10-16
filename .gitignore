@@ -2,4 +2,4 @@
 
 repository/*
 !repository/.gitkeep
-packagelist.txt
+packagelist.json

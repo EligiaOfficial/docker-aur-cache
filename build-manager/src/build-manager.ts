@@ -1,11 +1,11 @@
 import fs from 'fs';
-import readline from 'readline';
 import Docker from 'dockerode';
 import { execSync } from 'child_process';
 import ParameterHelper from './Helpers/ParameterHelper';
 import BuilderHelper from './Helpers/BuilderHelper';
 import DockerHelper from './Helpers/DockerHelper';
 import TimeHelper from './Helpers/TimeHelper';
+import PackageConfiguration from './Types/PackageConfiguration';
 
 const params = ParameterHelper.getParameters();
 const docker = new Docker({socketPath: '/var/run/docker.sock'});
@@ -145,21 +145,16 @@ const publishBuildPackages = async () => {
 }
 
 const handlePackageList = async (aurPackageListPath: string) => {
-    const fileStream = fs.createReadStream(params.packagelist_path);
+    const packageListJson = fs.readFileSync(params.packagelist_path, 'utf8');
+    const packageList = <Array<PackageConfiguration>>JSON.parse(packageListJson);
 
-    // TODO: Replace this with a JSON based configuration file to allow more flexibility (manually selecting the source of a provided packages, forcing clean builds, running commands beforehand, etc...)
-    const rl = readline.createInterface({
-        input: fileStream,
-        crlfDelay: Infinity
-    });
-
-    for await (const packageName of rl) {
-        console.log(`[build-manager] Processing "${packageName}"`);
+    for await (const packageConfiguration of packageList) {
+        console.log(`[build-manager] Processing "${packageConfiguration.packageName}"`);
 
         const packageBuildStartTime = new Date();
 
         try {
-            const command = BuilderHelper.getBuilderStartCommand(aurPackageListPath, packageName);
+            const command = BuilderHelper.getBuilderStartCommand(aurPackageListPath, packageConfiguration);
 
             console.log(`[build-manager] Starting the container with the following command: ${command}`);
 
@@ -196,7 +191,7 @@ const handlePackageList = async (aurPackageListPath: string) => {
         const packageBuildEndTime = new Date();
         const formattedTime = TimeHelper.getFormattedTimeDifference(packageBuildStartTime, packageBuildEndTime);
 
-        console.log(`[build-manager] Done processing "${packageName}", Building took ${formattedTime}`);
+        console.log(`[build-manager] Done processing "${packageConfiguration.packageName}", Building took ${formattedTime}`);
     }
 }
 
