@@ -8,6 +8,9 @@ Docker image that automatically builds AUR packages and hosts them for faster in
     - The [Traefik reverse proxy container](https://github.com/CrazyVito11/traefik-reverse-proxy) has been configured
     - A registered domain name
         - You can use something like [PiHole](https://github.com/pi-hole/pi-hole) to register local domains if you aren't going to host it publicly
+> [!TIP]
+> While this container was designed to work with Traefik and a domain name, with a couple of tweaks you can bind to a TCP port instead.
+> See the section **Bind NGINX to port instead of Traefik** for instructions.
 2. Clone this repository to your server
 3. Make a copy of `packagelist.json.example` and call it `packagelist.json`
 4. Add the packages you want to provide to the `packagelist.json` file
@@ -68,3 +71,16 @@ If you want the container to start building right now, you can run these command
 2. `./build-packages.sh`
 
 It should now start building your packages, wait for this process to finish and then you can install the packages you configured.
+
+### Bind NGINX to port instead of Traefik
+While it's intended to be used with my Traefik container, it does increase the steps needed to get this application up and running, and it might not even be possible in certain situations.
+
+With a couple of modifications to the `docker-compose.yml` file you can skip the need for Traefik and a domain name, and just connect directly to a TCP port instead.
+
+1. Remove the entire `networks` section at the bottom, as we no longer need that external network.
+2. Remove the `labels` section from the `nginx` container.
+3. Remove the `traefik-reverse-proxy` network from the `nginx` container.
+4. Add a `ports` section to the `nginx` container and bind the port you want to use to `80` on the container.
+    - **Example:** `- 8080:80` to bind it to port `8080` on your host machine.
+
+It should now be accessible on your desired TCP port without having to set up my Traefik configuration as well.
