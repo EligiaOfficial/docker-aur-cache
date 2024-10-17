@@ -37,7 +37,9 @@ RUN chown -R builder /builder
 # Copy script
 USER root
 COPY /build-manager/docker/build-packages.sh /repository-builder/
+COPY /build-manager/docker/clean-repository-archive.sh /repository-builder/
 RUN chmod 777 /repository-builder/build-packages.sh
+RUN chmod 777 /repository-builder/clean-repository-archive.sh
 USER builder
 
 # Configure fcron

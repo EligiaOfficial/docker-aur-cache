@@ -1,3 +1,6 @@
 # TODO: Enable this cron job once the application is ready
-# Automatically update the packages (Sunday @ 01:00)
-#0 1 * * 0 builder /tmp/test.sh
+# Automatically update the packages (Monday @ 01:00)
+#0 1 * * 1 builder /tmp/test.sh
+
+# Automatically clean up old packages in the repository archive (Monday @ 23:59)
+59 23 * * 1 builder bash /repository-builder/clean-repository-archive.sh

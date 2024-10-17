@@ -5,6 +5,7 @@ import ParameterHelper from './Helpers/ParameterHelper';
 import BuilderHelper from './Helpers/BuilderHelper';
 import DockerHelper from './Helpers/DockerHelper';
 import TimeHelper from './Helpers/TimeHelper';
+import FilesystemHelper from './Helpers/FilesystemHelper';
 import PackageConfiguration from './Types/PackageConfiguration';
 
 const params = ParameterHelper.getParameters();
@@ -19,6 +20,7 @@ if (! ParameterHelper.validateRequiredParameters(params)) {
 console.log(`[build-manager] Builder image name: ${params.builder_image_name}`);
 console.log(`[build-manager] Packagelist path: ${params.packagelist_path}`);
 console.log(`[build-manager] Builder directory: ${params.builder_dir}`);
+console.log(`[build-manager] Repository archive directory: ${params.repository_archive_dir}`);
 console.log(`[build-manager] Repository directory: ${params.repository_dir}`);
 console.log(`[build-manager] Repository name: ${params.repository_name}`);
 
@@ -111,7 +113,7 @@ const stopAllBuilderInstances = async () => {
 const prepareAurPackageList = async (): Promise<string> => {
     console.log("[build-manager] Preparing the AUR package list");
 
-    execSync(`cd /tmp; curl https://aur.archlinux.org/packages-meta-ext-v1.json.gz -O; gzip -d packages-meta-ext-v1.json.gz; ls -al packages-meta-ext-v1.json`);
+    execSync(`cd /tmp; curl https://aur.archlinux.org/packages-meta-ext-v1.json.gz -O; gzip -d -f packages-meta-ext-v1.json.gz; ls -al packages-meta-ext-v1.json`);
 
     console.log("[build-manager] The AUR package list is ready");
 
@@ -121,21 +123,27 @@ const prepareAurPackageList = async (): Promise<string> => {
 const moveOldPackagesToArchive = async () => {
     console.log("[build-manager] Moving old packages to the archive");
 
-    // TODO: Implement this
+    if (! FilesystemHelper.getFileCountInDirectoryByFileExtension(params.repository_dir, 'pkg.tar.zst')) {
+        console.log("[build-manager] Seems like there are no packages that need to be archived");
+
+        return;
+    }
+
+    execSync(`mv ${params.repository_dir}/*.pkg.tar.zst ${params.repository_archive_dir}/`);
 
     console.log("[build-manager] Old packages have been archived");
 }
 
 const publishBuildPackages = async () => {
-    try {
-        console.log("[build-manager] Copying new packages");
-        execSync(`mv ${params.package_staging_dir}/*.pkg.tar.zst ${params.repository_dir}/`);
-    } catch (e) {
-        console.warn(`[build-manager] Unable to move packages, maybe there are no packages available?`);
-        console.warn(e);
+    console.log("[build-manager] Copying new packages");
+
+    if (! FilesystemHelper.getFileCountInDirectoryByFileExtension(params.package_staging_dir, 'pkg.tar.zst')) {
+        console.warn("[build-manager] Hmmmm, seems like there are no packages available in the staging area, maybe all the packages failed to build?");
 
         return;
     }
+
+    execSync(`mv ${params.package_staging_dir}/*.pkg.tar.zst ${params.repository_dir}/`);
 
     console.log("[build-manager] Removing old database (if it exists)");
     execSync(`rm -f ${params.repository_dir}/${params.repository_name}.db* ${params.repository_dir}/${params.repository_name}.files*`);
