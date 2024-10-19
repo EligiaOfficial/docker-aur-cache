@@ -78,12 +78,20 @@ Each package that you want to build, will be it's own object inside the array.
 
 ## Tips
 ### Force the build immediately
-If you want the container to start building right now, you can run these commands to accomplish that:
+If you want the container to start building right now, you can run the following command:
 
-1. `docker compose exec --user builder build-manager bash`
-2. `./build-packages.sh`
+`docker compose exec --user builder build-manager bash /repository-builder/build-packages.sh`
 
 It should now start building your packages, wait for this process to finish and then you can install the packages you configured.
+
+
+### Download older version of AUR package
+If you need to downgrade a specific package for some reason, you can find older version in the `archive` directory of the webserver that is hosting the packages.
+
+Simply download the package from there and then install it manually with `pacman -U some-package-1.0.0-x86_64.pkg.tar.zst`.
+
+> [!WARNING]
+> Older versions of packages are automatically cleaned up after 30 days to preserve storage space on your server.
 
 
 ### Access the build reports
