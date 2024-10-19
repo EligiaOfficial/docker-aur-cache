@@ -25,16 +25,16 @@ This can also be extra beneficial if you have multiple computers running Arch Li
 > While this container was designed to work with Traefik and a domain name, with a couple of tweaks you can bind to a TCP port instead.
 > See the section **Bind NGINX to port instead of Traefik** for instructions.
 2. Clone this repository to your server
-3. Make a copy of `packagelist.json.example` and call it `packagelist.json`
-4. Add the packages you want to provide to the `packagelist.json` file
+3. Make a copy of `.env.example` and call it `.env`
+4. Make changes to the `.env` file if needed
+5. Make a copy of `packagelist.json.example` and call it `packagelist.json`
+6. Add the packages you want to provide to the `packagelist.json` file
     - You can find documentation about this file at section **Configure packagelist**.
-5. Update the repository permissions with `chmod 777 ./repository`
+7. Update the repository permissions with `chmod 777 ./repository`
     - **Note:** We are aware that this isn't very secure, this will be improved in the future.
-6. Build the container with `docker compose build`
-7. Start the container with `docker compose up -d`
-8. Set the right permissions with `docker compose exec build-manager bash -c 'chown builder /package-staging; chown builder /aur-package-list'`
-
-_**TODO:** Add instructions about a .env file, so the user can configure the domain and docker GID if needed_
+8. Build the container with `docker compose build`
+9. Start the container with `docker compose up -d`
+10. Set the right permissions with `docker compose exec build-manager bash -c 'chown builder /package-staging; chown builder /aur-package-list'`
 
 The container should now be ready, try visiting your domain and you should see a index page!
 This page will also show packages that are available for downloading.

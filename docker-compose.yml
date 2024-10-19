@@ -4,7 +4,7 @@ services:
       context: ./
       dockerfile: ./build-manager/docker/Dockerfile
       args:
-        - DOCKER_GID=964
+        - DOCKER_GID=${DOCKER_GID:-964}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./repository:/repository:cached

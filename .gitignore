@@ -3,3 +3,4 @@
 repository/*
 !repository/.gitkeep
 packagelist.json
+.env
