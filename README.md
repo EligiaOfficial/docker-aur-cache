@@ -2,6 +2,19 @@
 Docker image that automatically builds AUR packages and hosts them for faster installation on client devices.
 
 
+## Why?
+> "Why not just use an AUR helper to build the packages for you?"
+>
+> _- Probably you_
+
+While AUR helpers can make it easier to manage your AUR packages, it does mean that you have another package manager that you have to run every once in a while to update your AUR packages. Which could result in you having to run 2 commands to update your system.
+
+Some AUR packages can also be quite complex, taking a while to compile, which you have to sit through every time you want to update your system.
+
+This Docker container was made to compile these AUR packages beforehand, and then provide them in such a way so that pacman can install those AUR packages directly, without needing AUR helpers or other build tools on your machine.
+This can also be extra beneficial if you have multiple computers running Arch Linux, as then you only have to compile the packages once for all those machines.
+
+
 ## Setup (Container)
 1. Make sure you meet the follow prerequisites
     - Docker + Docker Compose have been installed
@@ -19,7 +32,7 @@ Docker image that automatically builds AUR packages and hosts them for faster in
     - **Note:** We are aware that this isn't very secure, this will be improved in the future.
 6. Build the container with `docker compose build`
 7. Start the container with `docker compose up -d`
-8. Set the right permissions with `docker compose exec build-manager chown builder /package-staging`
+8. Set the right permissions with `docker compose exec build-manager bash -c 'chown builder /package-staging; chown builder /aur-package-list'`
 
 _**TODO:** Add instructions about a .env file, so the user can configure the domain and docker GID if needed_
 
@@ -71,6 +84,14 @@ If you want the container to start building right now, you can run these command
 2. `./build-packages.sh`
 
 It should now start building your packages, wait for this process to finish and then you can install the packages you configured.
+
+
+### Access the build reports
+The application generates a report every time it runs the build process, allowing you to more easily troubleshoot troublesome packages.
+
+These reports can be found in the `build-reports` directory of the webserver that is hosting the packages.
+For now these are only available in JSON format, but these will become easier to read in a future commit.
+
 
 ### Bind NGINX to port instead of Traefik
 While it's intended to be used with my Traefik container, it does increase the steps needed to get this application up and running, and it might not even be possible in certain situations.

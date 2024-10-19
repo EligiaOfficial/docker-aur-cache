@@ -8,7 +8,7 @@ export default class BuilderHelper {
         return `cd /builder; node ./dist/builder.js --package_configuration_encoded="${packageConfigurationEncoded}" --build_dir="/repository-builder" --package_staging_dir="/package-staging" --aur_package_list_path="${aurPackageListPath}"`;
     }
 
-    public static getBuilderMounts(aurPackageListPath: string): MountConfig {
+    public static getBuilderMounts(): MountConfig {
         return [
             {
                 Target: '/package-staging',
@@ -17,9 +17,9 @@ export default class BuilderHelper {
                 ReadOnly: false,
             },
             {
-                Target: aurPackageListPath,
-                Source: aurPackageListPath,
-                Type: 'bind',
+                Target: '/aur-package-list',
+                Source: 'docker-aur-cache_aur-package-list',
+                Type: 'volume',
                 ReadOnly: true,
             }
         ];

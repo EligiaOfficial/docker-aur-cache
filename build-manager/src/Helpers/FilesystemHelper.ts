@@ -14,4 +14,8 @@ export default class FilesystemHelper {
     public static getFileCountInDirectoryByFileExtension(directory: string, fileExtension: string): number {
         return FilesystemHelper.getFilesInDirectoryByFileExtension(directory, fileExtension).length;
     }
+
+    public static ensureDirectoryExists(directory: string): void {
+        execSync(`mkdir -p "${directory}"`);
+    }
 }

@@ -5,8 +5,11 @@ import ParameterHelper from './Helpers/ParameterHelper';
 import BuilderHelper from './Helpers/BuilderHelper';
 import DockerHelper from './Helpers/DockerHelper';
 import TimeHelper from './Helpers/TimeHelper';
+import LineTransformer from './Transformers/LineTransformer';
 import FilesystemHelper from './Helpers/FilesystemHelper';
 import PackageConfiguration from './Types/PackageConfiguration';
+import PackageBuildReport from './Types/PackageBuildReport';
+import PackageBuildReportLogLine from './Types/PackageBuildReportLogLine';
 
 const params = ParameterHelper.getParameters();
 const docker = new Docker({socketPath: '/var/run/docker.sock'});
@@ -17,9 +20,12 @@ if (! ParameterHelper.validateRequiredParameters(params)) {
     process.exit(1);
 }
 
+const packageBuildReports: Array<PackageBuildReport> = [];
+
 console.log(`[build-manager] Builder image name: ${params.builder_image_name}`);
 console.log(`[build-manager] Packagelist path: ${params.packagelist_path}`);
 console.log(`[build-manager] Builder directory: ${params.builder_dir}`);
+console.log(`[build-manager] Build report directory: ${params.build_report_dir}`);
 console.log(`[build-manager] Repository archive directory: ${params.repository_archive_dir}`);
 console.log(`[build-manager] Repository directory: ${params.repository_dir}`);
 console.log(`[build-manager] Repository name: ${params.repository_name}`);
@@ -113,11 +119,11 @@ const stopAllBuilderInstances = async () => {
 const prepareAurPackageList = async (): Promise<string> => {
     console.log("[build-manager] Preparing the AUR package list");
 
-    execSync(`cd /tmp; curl https://aur.archlinux.org/packages-meta-ext-v1.json.gz -O; gzip -d -f packages-meta-ext-v1.json.gz; ls -al packages-meta-ext-v1.json`);
+    execSync(`cd /aur-package-list; curl https://aur.archlinux.org/packages-meta-ext-v1.json.gz -O; gzip -d -f packages-meta-ext-v1.json.gz; ls -al packages-meta-ext-v1.json`);
 
     console.log("[build-manager] The AUR package list is ready");
 
-    return '/tmp/packages-meta-ext-v1.json';
+    return '/aur-package-list/packages-meta-ext-v1.json';
 }
 
 const moveOldPackagesToArchive = async () => {
@@ -161,11 +167,20 @@ const handlePackageList = async (aurPackageListPath: string) => {
 
         const packageBuildStartTime = new Date();
 
+        const packageBuildReport: PackageBuildReport = {
+            configuration: packageConfiguration,
+            success: false,
+            buildStartTime: packageBuildStartTime,
+            buildEndTime: new Date(),
+            logs: [],
+        };
+
         try {
             const command = BuilderHelper.getBuilderStartCommand(aurPackageListPath, packageConfiguration);
 
             console.log(`[build-manager] Starting the container with the following command: ${command}`);
 
+            // TODO: Allow the user to set limits for the builder (CPU/RAM)
             const container = await docker.createContainer({
                 Image: params.builder_image_name,
                 AttachStdout: true,
@@ -173,14 +188,26 @@ const handlePackageList = async (aurPackageListPath: string) => {
                 User: 'builder',
                 Cmd: ['/bin/bash', '-c', command],
                 HostConfig: {
-                    Mounts: BuilderHelper.getBuilderMounts(aurPackageListPath)
+                    Mounts: BuilderHelper.getBuilderMounts()
                 }
             });
 
             await container.start();
 
             container.attach({stream: true, stdout: true, stderr: true}, function (_, stream) {
+                const lineTransformer = new LineTransformer();
+
+                if (! stream) {
+                    return;
+                }
+
+                stream.pipe(lineTransformer);
+
                 container.modem.demuxStream(stream, process.stdout, process.stderr);
+
+                lineTransformer.on('data', (line: PackageBuildReportLogLine) => {
+                    packageBuildReport.logs.push(line);
+                });
             });
 
             // Wait for the container to finish it's job
@@ -188,7 +215,6 @@ const handlePackageList = async (aurPackageListPath: string) => {
 
             await container.remove();
         } catch (e) {
-            // TODO: Collect as much information as possible about the error and then write it to a report (in HTML maybe?)
             console.error(`[build-manager] Something went wrong while building`, e);
 
             // We are not sure if the container also stopped properly
@@ -199,9 +225,36 @@ const handlePackageList = async (aurPackageListPath: string) => {
         const packageBuildEndTime = new Date();
         const formattedTime = TimeHelper.getFormattedTimeDifference(packageBuildStartTime, packageBuildEndTime);
 
+        packageBuildReport.buildEndTime = packageBuildEndTime;
+
+        // Grab the last log item to see if it failed
+        if (packageBuildReport.logs.length) {
+            const lastLogItem = packageBuildReport.logs.slice(-1).pop()!;
+
+            packageBuildReport.success = lastLogItem.type === "standard";
+        }
+
+        packageBuildReports.push(packageBuildReport);
+
         console.log(`[build-manager] Done processing "${packageConfiguration.packageName}", Building took ${formattedTime}`);
     }
 }
+
+const generateBuildReport = async () => {
+    console.log("[build-manager] Generating build report");
+
+    const currentDate = new Date();
+    const formattedDate = TimeHelper.getFormattedDateTimeForFilename(currentDate);
+
+    FilesystemHelper.ensureDirectoryExists(params.build_report_dir);
+
+    fs.writeFileSync(
+        `${params.build_report_dir}/build-report-${formattedDate}.json`,
+        JSON.stringify(packageBuildReports)
+    );
+
+    console.log("[build-manager] The build report has been generated");
+};
 
 const startBuilding = async () => {
     const aurPackageListPath = await prepareAurPackageList();
@@ -214,6 +267,7 @@ const startBuilding = async () => {
 
     await moveOldPackagesToArchive();
     await publishBuildPackages();
+    await generateBuildReport();
 }
 
 const startTime = new Date();

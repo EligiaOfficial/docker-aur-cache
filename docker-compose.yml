@@ -10,6 +10,7 @@ services:
       - ./repository:/repository:cached
       - ./packagelist.json:/repository-builder/packagelist.json:ro
       - package-staging:/package-staging
+      - aur-package-list:/aur-package-list
     restart: on-failure
     networks:
       - default
@@ -32,6 +33,7 @@ services:
 
 volumes:
   package-staging:
+  aur-package-list:
 
 # You can find the Traefik reverse proxy container on GitHub
 # https://github.com/CrazyVito11/traefik-reverse-proxy
