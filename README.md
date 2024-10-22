@@ -61,10 +61,29 @@ Simply perform a full system update and you should be able to install packages t
 
 
 ## Configure packagelist
-The `packagelist.json` file is a JSON formatted file that will be used to configure which packages you want to build, and the specific tweaks they might need to build properly.
-Each package that you want to build, will be it's own object inside the array.
+The `packagelist.config.json` file is a JSON formatted file that will be used to configure all sorts of things, like which packages you want to build, the tweaks these packages need, limit system resources given to the builder, etc.
+
+### Packagelist config description
+This is the root of the `packagelist.config.json` file.
+
+| **Field**      | **Required** | **Type**                   | **Description**                                                                   |
+|----------------|--------------|----------------------------|-----------------------------------------------------------------------------------|
+| `builderLimit` | Yes          | `builder limit object`     | Defines how many system resources the builder instance is allowed to use.         |
+| `packages`     | Yes          | `array of package objects` | An array of packages that you want to be build each time the builder is executed. |
+
+
+### Builder limit object description
+This object is used to limit how many system resources the builder instance is allowed to use.
+
+| **Field**    | **Required** | **Type** | **Description**                                                                                                                                                      |
+|--------------|--------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `cpusetCpus` | Yes          | `string` | Defines which CPU cores it's allowed to use. It can be a list _(`1,2,3,4`)_ of cores or a range of cores _(`1-4`)_.                                                  |
+| `memory`     | Yes          | `string` | Defines how much memory it's allowed to use before it's terminated. The format is `1234X`, where X determines the scale. Allowed scales are `b`, `k`, `m`, `g`. |
+
 
 ### Package object description
+This object is used to define the settings in order to build one specific package.
+
 | **Field**                | **Required** | **Type**               | **Description**                                                                                                            |
 |--------------------------|--------------|------------------------|----------------------------------------------------------------------------------------------------------------------------|
 | `packageName`            | Yes          | `string`               | Defines the name of the AUR package that should be build.                                                                  |
@@ -98,7 +117,9 @@ Simply download the package from there and then install it manually with `pacman
 The application generates a report every time it runs the build process, allowing you to more easily troubleshoot troublesome packages.
 
 These reports can be found in the `build-reports` directory of the webserver that is hosting the packages.
-For now these are only available in JSON format, but these will become easier to read in a future commit.
+
+> [!TIP]
+> For now these are only available in JSON format, but these will become easier to read in a future commit.
 
 
 ### Bind NGINX to port instead of Traefik

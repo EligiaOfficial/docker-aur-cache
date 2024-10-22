@@ -5,9 +5,9 @@ import ParameterHelper from './Helpers/ParameterHelper';
 import BuilderHelper from './Helpers/BuilderHelper';
 import DockerHelper from './Helpers/DockerHelper';
 import TimeHelper from './Helpers/TimeHelper';
-import LineTransformer from './Transformers/LineTransformer';
 import FilesystemHelper from './Helpers/FilesystemHelper';
-import PackageConfiguration from './Types/PackageConfiguration';
+import LineTransformer from './Transformers/LineTransformer';
+import PackageListConfiguration from './Types/PackageListConfiguration';
 import PackageBuildReport from './Types/PackageBuildReport';
 import PackageBuildReportLogLine from './Types/PackageBuildReportLogLine';
 
@@ -23,7 +23,7 @@ if (! ParameterHelper.validateRequiredParameters(params)) {
 const packageBuildReports: Array<PackageBuildReport> = [];
 
 console.log(`[build-manager] Builder image name: ${params.builder_image_name}`);
-console.log(`[build-manager] Packagelist path: ${params.packagelist_path}`);
+console.log(`[build-manager] Packagelist configuration path: ${params.packagelist_configuration_path}`);
 console.log(`[build-manager] Builder directory: ${params.builder_dir}`);
 console.log(`[build-manager] Build report directory: ${params.build_report_dir}`);
 console.log(`[build-manager] Repository archive directory: ${params.repository_archive_dir}`);
@@ -159,10 +159,10 @@ const publishBuildPackages = async () => {
 }
 
 const handlePackageList = async (aurPackageListPath: string) => {
-    const packageListJson = fs.readFileSync(params.packagelist_path, 'utf8');
-    const packageList = <Array<PackageConfiguration>>JSON.parse(packageListJson);
+    const packageListConfigurationJson = fs.readFileSync(params.packagelist_configuration_path, 'utf8');
+    const packageListConfiguration = <PackageListConfiguration>JSON.parse(packageListConfigurationJson);
 
-    for await (const packageConfiguration of packageList) {
+    for await (const packageConfiguration of packageListConfiguration.packages) {
         console.log(`[build-manager] Processing "${packageConfiguration.packageName}"`);
 
         const packageBuildStartTime = new Date();
@@ -180,7 +180,6 @@ const handlePackageList = async (aurPackageListPath: string) => {
 
             console.log(`[build-manager] Starting the container with the following command: ${command}`);
 
-            // TODO: Allow the user to set limits for the builder (CPU/RAM)
             const container = await docker.createContainer({
                 Image: params.builder_image_name,
                 AttachStdout: true,
@@ -188,7 +187,9 @@ const handlePackageList = async (aurPackageListPath: string) => {
                 User: 'builder',
                 Cmd: ['/bin/bash', '-c', command],
                 HostConfig: {
-                    Mounts: BuilderHelper.getBuilderMounts()
+                    Mounts: BuilderHelper.getBuilderMounts(),
+                    CpusetCpus: packageListConfiguration.builderLimit.cpusetCpus,
+                    Memory: FilesystemHelper.stringifiedSizeToBytes(packageListConfiguration.builderLimit.memory)
                 }
             });
 

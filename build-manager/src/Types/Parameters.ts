@@ -1,6 +1,6 @@
 export default interface Parameters {
     builder_image_name: string
-    packagelist_path: string
+    packagelist_configuration_path: string
     builder_dir: string
     package_staging_dir: string
     build_report_dir: string

@@ -4,7 +4,7 @@ cd /build-manager
 #nvm use
 node ./dist/build-manager.js \
     --builder_image_name=docker-aur-cache-builder \
-    --packagelist_path=/repository-builder/packagelist.json \
+    --packagelist_configuration_path=/repository-builder/packagelist.config.json \
     --builder_dir=/builder \
     --package_staging_dir=/package-staging \
     --build_report_dir=/repository/build-reports \

@@ -18,4 +18,26 @@ export default class FilesystemHelper {
     public static ensureDirectoryExists(directory: string): void {
         execSync(`mkdir -p "${directory}"`);
     }
+
+    public static stringifiedSizeToBytes(stringifiedSize: string): number {
+        const unit = stringifiedSize.slice(-1).toLowerCase();
+        const value = parseFloat(stringifiedSize.slice(0, -1));
+
+        if (isNaN(value)) {
+          throw new Error('Invalid memory limit value');
+        }
+
+        switch (unit) {
+            case 'b': // bytes
+                return value;
+            case 'k': // kilobytes
+                return value * 1024;
+            case 'm': // megabytes
+                return value * 1024 ** 2;
+            case 'g': // gigabytes
+                return value * 1024 ** 3;
+            default:
+                throw new Error('Invalid memory unit');
+        }
+    }
 }

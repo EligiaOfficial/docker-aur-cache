@@ -2,5 +2,5 @@
 
 repository/*
 !repository/.gitkeep
-packagelist.json
+packagelist.config.json
 .env

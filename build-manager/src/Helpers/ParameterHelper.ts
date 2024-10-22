@@ -8,7 +8,7 @@ export default class ParameterHelper {
     public static validateRequiredParameters(params: Parameters): boolean {
         return (
             typeof params.builder_image_name === "string" &&
-            typeof params.packagelist_path === "string" &&
+            typeof params.packagelist_configuration_path === "string" &&
             typeof params.builder_dir === "string" &&
             typeof params.package_staging_dir === "string" &&
             typeof params.build_report_dir === "string" &&
