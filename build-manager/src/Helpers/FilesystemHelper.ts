@@ -15,10 +15,6 @@ export default class FilesystemHelper {
         return FilesystemHelper.getFilesInDirectoryByFileExtension(directory, fileExtension).length;
     }
 
-    public static ensureDirectoryExists(directory: string): void {
-        execSync(`mkdir -p "${directory}"`);
-    }
-
     public static stringifiedSizeToBytes(stringifiedSize: string): number {
         const unit = stringifiedSize.slice(-1).toLowerCase();
         const value = parseFloat(stringifiedSize.slice(0, -1));

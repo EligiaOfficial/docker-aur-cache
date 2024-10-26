@@ -1,7 +1,14 @@
 #!/bin/bash
 
+set -e
+
+
+# First, ensure that required directories are made
+mkdir -p /repository/archive
+mkdir -p /repository/build-reports
+
+
 cd /build-manager
-#nvm use
 node ./dist/build-manager.js \
     --builder_image_name=docker-aur-cache-builder \
     --packagelist_configuration_path=/repository-builder/packagelist.config.json \

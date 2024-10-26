@@ -6,6 +6,7 @@ import BuilderHelper from './Helpers/BuilderHelper';
 import DockerHelper from './Helpers/DockerHelper';
 import TimeHelper from './Helpers/TimeHelper';
 import FilesystemHelper from './Helpers/FilesystemHelper';
+import ValidatorHelper from './Helpers/ValidatorHelper';
 import LineTransformer from './Transformers/LineTransformer';
 import PackageListConfiguration from './Types/PackageListConfiguration';
 import PackageBuildReport from './Types/PackageBuildReport';
@@ -14,11 +15,19 @@ import PackageBuildReportLogLine from './Types/PackageBuildReportLogLine';
 const params = ParameterHelper.getParameters();
 const docker = new Docker({socketPath: '/var/run/docker.sock'});
 
-if (! ParameterHelper.validateRequiredParameters(params)) {
-    console.error("Required parameters are missing or invalid");
+const paramsValidationMessages = ValidatorHelper.validateObject(
+    ParameterHelper.getParameterValidationRules(),
+    params
+);
+
+if (Object.keys(paramsValidationMessages).length) {
+    console.error("Some parameters are missing or invalid");
+    console.error(ValidatorHelper.stringifyValidationMessages(paramsValidationMessages));
 
     process.exit(1);
 }
+
+// TODO: Validate the packagelist configuration file as well
 
 const packageBuildReports: Array<PackageBuildReport> = [];
 
@@ -246,8 +255,6 @@ const generateBuildReport = async () => {
 
     const currentDate = new Date();
     const formattedDate = TimeHelper.getFormattedDateTimeForFilename(currentDate);
-
-    FilesystemHelper.ensureDirectoryExists(params.build_report_dir);
 
     fs.writeFileSync(
         `${params.build_report_dir}/build-report-${formattedDate}.json`,
