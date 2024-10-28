@@ -23,6 +23,8 @@ This can also be extra beneficial if you have multiple computers running Arch Li
         - You can use something like [PiHole](https://github.com/pi-hole/pi-hole) to register local domains if you aren't going to host it publicly
 > [!TIP]
 > While this container was designed to work with Traefik and a domain name, with a couple of tweaks you can bind to a TCP port instead.
+> Allowing you to skip the requirement of needing both Traefik and a domain name to host this application.
+>
 > See the section **Bind NGINX to port instead of Traefik** for instructions.
 2. Clone this repository to your server
 3. Make a copy of `.env.example` and call it `.env`
