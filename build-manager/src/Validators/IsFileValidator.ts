@@ -3,6 +3,12 @@ import IValidator from "./IValidator";
 
 export default class IsFileValidator implements IValidator {
     public validate(value: any): boolean {
+        if (typeof value === "undefined") {
+            // This field could be optional, so assume it's fine
+
+            return true;
+        }
+
         if (typeof value !== "string") {
             return false;
         }

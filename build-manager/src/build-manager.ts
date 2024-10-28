@@ -7,6 +7,7 @@ import DockerHelper from './Helpers/DockerHelper';
 import TimeHelper from './Helpers/TimeHelper';
 import FilesystemHelper from './Helpers/FilesystemHelper';
 import ValidatorHelper from './Helpers/ValidatorHelper';
+import PackagelistConfigHelper from './Helpers/PackagelistConfigHelper';
 import LineTransformer from './Transformers/LineTransformer';
 import PackageListConfiguration from './Types/PackageListConfiguration';
 import PackageBuildReport from './Types/PackageBuildReport';
@@ -14,6 +15,7 @@ import PackageBuildReportLogLine from './Types/PackageBuildReportLogLine';
 
 const params = ParameterHelper.getParameters();
 const docker = new Docker({socketPath: '/var/run/docker.sock'});
+
 
 const paramsValidationMessages = ValidatorHelper.validateObject(
     ParameterHelper.getParameterValidationRules(),
@@ -27,7 +29,23 @@ if (Object.keys(paramsValidationMessages).length) {
     process.exit(1);
 }
 
-// TODO: Validate the packagelist configuration file as well
+
+const packageListConfigurationJson = fs.readFileSync(params.packagelist_configuration_path, 'utf8');
+const packageListConfiguration = <PackageListConfiguration>JSON.parse(packageListConfigurationJson);
+
+const packageListConfigurationValidationMessages = ValidatorHelper.validateObject(
+    PackagelistConfigHelper.getPackagelistConfigValidationRules(),
+    packageListConfiguration
+);
+
+if (Object.keys(packageListConfigurationValidationMessages).length) {
+    console.error("The packagelist configuration is invalid");
+    console.error(ValidatorHelper.stringifyValidationMessages(packageListConfigurationValidationMessages));
+
+    process.exit(1);
+}
+
+
 
 const packageBuildReports: Array<PackageBuildReport> = [];
 
@@ -168,9 +186,6 @@ const publishBuildPackages = async () => {
 }
 
 const handlePackageList = async (aurPackageListPath: string) => {
-    const packageListConfigurationJson = fs.readFileSync(params.packagelist_configuration_path, 'utf8');
-    const packageListConfiguration = <PackageListConfiguration>JSON.parse(packageListConfigurationJson);
-
     for await (const packageConfiguration of packageListConfiguration.packages) {
         console.log(`[build-manager] Processing "${packageConfiguration.packageName}"`);
 
