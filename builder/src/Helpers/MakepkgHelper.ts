@@ -36,6 +36,7 @@ export default class MakepkgHelper {
         });
     }
 
+    // TODO: Make this function no longer estimate the output file name and instead actually search it
     public static getEstimatedOutputFilenameFromPkgbuildData(pkgbuildData: object): string | null {
         if (! ("pkgname" in pkgbuildData)) {
             return null;
@@ -55,7 +56,15 @@ export default class MakepkgHelper {
 
         let architecture = pkgbuildData.arch;
         if (Array.isArray(pkgbuildData.arch)) {
-            architecture = pkgbuildData.arch[0];
+            if (pkgbuildData.arch.includes('any')) {
+                architecture = 'any';
+            } else if (pkgbuildData.arch.includes('x86_64')) {
+                architecture = 'x86_64';
+            } else {
+                console.warn(`[builder] The package architecture "${pkgbuildData.arch[0]}" isn't the expected "any" or "x86_64", we might not be able to find it!`);
+
+                architecture = pkgbuildData.arch[0];
+            }
         }
 
         let packageVersion = `${pkgbuildData.pkgver}-${pkgbuildData.pkgrel}`;
