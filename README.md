@@ -79,7 +79,7 @@ This object is used to limit how many system resources the builder instance is a
 
 | **Field**    | **Required** | **Type** | **Description**                                                                                                                                                      |
 |--------------|--------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `cpusetCpus` | Yes          | `string` | Defines which CPU cores it's allowed to use. It can be a list _(`1,2,3,4`)_ of cores or a range of cores _(`1-4`)_.                                                  |
+| `cpusetCpus` | Yes          | `string` | Defines which CPU cores it's allowed to use. It can be a list _(`0,1,2,3`)_ of cores or a range of cores _(`0-3`)_.                                                  |
 | `memory`     | Yes          | `string` | Defines how much memory it's allowed to use before it's terminated. The format is `1234X`, where X determines the scale. Allowed scales are `b`, `k`, `m`, `g`. |
 
 

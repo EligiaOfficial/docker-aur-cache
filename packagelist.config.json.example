@@ -1,6 +1,6 @@
 {
     "builderLimit": {
-        "cpusetCpus": "1-4",
+        "cpusetCpus": "0-3",
         "memory": "4096m"
     },
     "packages": [
