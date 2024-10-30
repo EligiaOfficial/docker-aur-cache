@@ -36,37 +36,6 @@ export default class MakepkgHelper {
         });
     }
 
-    public static getEstimatedOutputFilenameFromPkgbuildData(pkgbuildData: object): string | null {
-        if (! ("pkgname" in pkgbuildData)) {
-            return null;
-        }
-
-        if (! ("pkgver" in pkgbuildData)) {
-            return null;
-        }
-
-        if (! ("pkgrel" in pkgbuildData)) {
-            return null;
-        }
-
-        if (! ("arch" in pkgbuildData)) {
-            return null;
-        }
-
-        let architecture = pkgbuildData.arch;
-        if (Array.isArray(pkgbuildData.arch)) {
-            architecture = pkgbuildData.arch[0];
-        }
-
-        let packageVersion = `${pkgbuildData.pkgver}-${pkgbuildData.pkgrel}`;
-
-        if ("epoch" in pkgbuildData) {
-            packageVersion = `${pkgbuildData.epoch}:${packageVersion}`;
-        }
-
-        return `${pkgbuildData.pkgname}-${packageVersion}-${architecture}.pkg.tar.zst`;
-    }
-
     public static getDependsFromPkgbuildData(pkgbuildData: object): Array<string> {
         if (! ("depends" in pkgbuildData)) {
             return [];
