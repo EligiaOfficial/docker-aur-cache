@@ -8,6 +8,7 @@ import AurRpcApiPackage from "../Types/AurRpcApiPackage";
 export default class PackageHelper {
     private static validPackageNameRegex = new RegExp(/^[a-z0-9\-_]+$/);
     private static packageNotFoundRegex = new RegExp(/^error\: package \'.+\' was not found/);
+    private static findPackagesOutputRegex = new RegExp(/^\/[a-z0-9-_\/\.]+\.pkg\.tar\.zst$/gm);
 
     public static isValidPackageName(packageName: string): boolean {
         return PackageHelper.validPackageNameRegex.test(packageName);
@@ -59,7 +60,20 @@ export default class PackageHelper {
         });
     }
 
-    public static buildAurPackage(params: Parameters, packageName: string): Promise<string> {
+    public static getPackagesInDirectory(directoryPath: string): Array<string> {
+        const consoleOutput = execSync(`cd "${directoryPath}"; find "$(pwd)" -name "*.pkg.tar.zst"`)
+        const matches       = consoleOutput.toString().matchAll(PackageHelper.findPackagesOutputRegex);
+
+        const packages: Array<string> = [];
+
+        for (const match of matches) {
+            packages.push(match[0]);
+        }
+
+        return packages;
+    }
+
+    public static buildAurPackage(params: Parameters, packageName: string): Promise<Array<string>> {
         return new Promise(async (resolve, reject) => {
             const fullPackagePath = `${params.build_dir}/${packageName}`;
 
@@ -113,15 +127,7 @@ export default class PackageHelper {
 
             execSync(`cd "${fullPackagePath}"; makepkg --clean --force --nodeps`);
 
-            const compiledPackageFilename = MakepkgHelper.getEstimatedOutputFilenameFromPkgbuildData(pkgbuildData);
-            const compiledPackageFilePath = `${fullPackagePath}/${compiledPackageFilename}`
-
-            // Double check that the file exist, as the name is "guessed"
-            if (! fs.existsSync(compiledPackageFilePath)) {
-                return reject(`Build package file "${compiledPackageFilePath}" doesn't seem to exist`);
-            }
-
-            resolve(compiledPackageFilePath);
+            resolve(PackageHelper.getPackagesInDirectory(fullPackagePath));
         });
     }
 
@@ -191,9 +197,11 @@ export default class PackageHelper {
             if (packageType.type === 'aur') {
                 console.log(`[builder] Building and installing AUR package "${packageType.packageToInstall}"`);
 
-                const packagePath = await PackageHelper.buildAurPackage(params, packageType.packageToInstall);
+                const packagePaths = await PackageHelper.buildAurPackage(params, packageType.packageToInstall);
     
-                await PackageHelper.installAurPackage(packagePath);
+                for (const packagePath of packagePaths) {
+                    await PackageHelper.installAurPackage(packagePath);
+                }
 
                 resolve();
                 return;

@@ -36,46 +36,6 @@ export default class MakepkgHelper {
         });
     }
 
-    // TODO: Make this function no longer estimate the output file name and instead actually search it
-    public static getEstimatedOutputFilenameFromPkgbuildData(pkgbuildData: object): string | null {
-        if (! ("pkgname" in pkgbuildData)) {
-            return null;
-        }
-
-        if (! ("pkgver" in pkgbuildData)) {
-            return null;
-        }
-
-        if (! ("pkgrel" in pkgbuildData)) {
-            return null;
-        }
-
-        if (! ("arch" in pkgbuildData)) {
-            return null;
-        }
-
-        let architecture = pkgbuildData.arch;
-        if (Array.isArray(pkgbuildData.arch)) {
-            if (pkgbuildData.arch.includes('any')) {
-                architecture = 'any';
-            } else if (pkgbuildData.arch.includes('x86_64')) {
-                architecture = 'x86_64';
-            } else {
-                console.warn(`[builder] The package architecture "${pkgbuildData.arch[0]}" isn't the expected "any" or "x86_64", we might not be able to find it!`);
-
-                architecture = pkgbuildData.arch[0];
-            }
-        }
-
-        let packageVersion = `${pkgbuildData.pkgver}-${pkgbuildData.pkgrel}`;
-
-        if ("epoch" in pkgbuildData) {
-            packageVersion = `${pkgbuildData.epoch}:${packageVersion}`;
-        }
-
-        return `${pkgbuildData.pkgname}-${packageVersion}-${architecture}.pkg.tar.zst`;
-    }
-
     public static getDependsFromPkgbuildData(pkgbuildData: object): Array<string> {
         if (! ("depends" in pkgbuildData)) {
             return [];
