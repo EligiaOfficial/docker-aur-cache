@@ -77,7 +77,7 @@ export default class PackageHelper {
         return new Promise(async (resolve, reject) => {
             const fullPackagePath = `${params.build_dir}/${packageName}`;
 
-            console.log(`[builder] Path: ${params.build_dir}, Package: ${packageName}`);
+            console.log(`[builder] Building AUR package: Package: ${packageName}, Path: ${params.build_dir}`);
 
             // Clone the package if it doesn't exist yet
             if (! fs.existsSync(fullPackagePath)) {
@@ -95,10 +95,6 @@ export default class PackageHelper {
                 execSync(`cd "${params.build_dir}"; git clone https://aur.archlinux.org/${packageName}.git`);
             }
 
-            console.log(`[builder] Updating AUR package ${packageName}`);
-
-            // Update the AUR package
-            execSync(`cd "${fullPackagePath}"; git pull`);
 
             const pkgbuildPath = `${fullPackagePath}/PKGBUILD`;
             const pkgbuildData = await MakepkgHelper.parsePkgbuildFile(pkgbuildPath);
@@ -107,24 +103,32 @@ export default class PackageHelper {
             const makeDependsPackages  = MakepkgHelper.getMakeDependsFromPkgbuildData(pkgbuildData);
             const checkDependsPackages = MakepkgHelper.getCheckDependsFromPkgbuildData(pkgbuildData);
 
+            console.log(`[builder] Installing make dependencies for ${packageName}`);
             await Promise.all(
                 makeDependsPackages.map((dependencyPackageName: string) => 
                     PackageHelper.installPackage(params, dependencyPackageName)
                 )
             );
+            console.log(`[builder] Done installing make dependencies for ${packageName}`);
 
+            console.log(`[builder] Installing check dependencies for ${packageName}`);
             await Promise.all(
                 checkDependsPackages.map((dependencyPackageName: string) => 
                     PackageHelper.installPackage(params, dependencyPackageName)
                 )
             );
+            console.log(`[builder] Done installing check dependencies for ${packageName}`);
 
+            console.log(`[builder] Installing dependencies for ${packageName}`);
             await Promise.all(
                 dependsPackages.map((dependencyPackageName: string) => 
                     PackageHelper.installPackage(params, dependencyPackageName)
                 )
             );
+            console.log(`[builder] Done installing dependencies for ${packageName}`);
 
+
+            console.log(`[builder] Starting build process for ${packageName}`);
             execSync(`cd "${fullPackagePath}"; makepkg --clean --force --nodeps`);
 
             resolve(PackageHelper.getPackagesInDirectory(fullPackagePath));
