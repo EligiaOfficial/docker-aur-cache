@@ -42,7 +42,7 @@ The container should now be ready, try visiting your domain and you should see a
 This page will also show packages that are available for downloading.
 
 > [!TIP]
-> Normally you would have to wait until Sunday @ 01:00 for it to start building, but instructions are available in case you want to start the build immediately.
+> Normally you would have to wait until Monday @ 01:00 for it to start building, but instructions are available in case you want to start the build immediately.
 > See the section **Force the build immediately** for more information.
 
 
@@ -77,10 +77,11 @@ This is the root of the `packagelist.config.json` file.
 ### Builder limit object description
 This object is used to limit how many system resources the builder instance is allowed to use.
 
-| **Field**    | **Required** | **Type** | **Description**                                                                                                                                                      |
-|--------------|--------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `cpusetCpus` | Yes          | `string` | Defines which CPU cores it's allowed to use. It can be a list _(`0,1,2,3`)_ of cores or a range of cores _(`0-3`)_.                                                  |
-| `memory`     | Yes          | `string` | Defines how much memory it's allowed to use before it's terminated. The format is `1234X`, where X determines the scale. Allowed scales are `b`, `k`, `m`, `g`. |
+| **Field**      | **Required** | **Type** | **Description**                                                                                                                                                                    |
+|----------------|--------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `maxBuildTime` | Yes          | `string` | Defines how long the build process is allowed to run for 1 package before it's terminated. The format is `1234X`, where X determines the scale. Allowed scales are `s`, `m`, `h` . |
+| `cpusetCpus`   | Yes          | `string` | Defines which CPU cores it's allowed to use. It can be a list _(`0,1,2,3`)_ of cores or a range of cores _(`0-3`)_.                                                                |
+| `memory`       | Yes          | `string` | Defines how much memory it's allowed to use before it's terminated. The format is `1234X`, where X determines the scale. Allowed scales are `b`, `k`, `m`, `g`.                    |
 
 
 ### Package object description

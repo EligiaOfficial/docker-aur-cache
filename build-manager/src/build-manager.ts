@@ -186,10 +186,13 @@ const publishBuildPackages = async () => {
 }
 
 const handlePackageList = async (aurPackageListPath: string) => {
+    const maximumBuildTime = TimeHelper.stringifiedTimeDurationToSeconds(packageListConfiguration.builderLimit.maxBuildTime);
+
     for await (const packageConfiguration of packageListConfiguration.packages) {
         console.log(`[build-manager] Processing "${packageConfiguration.packageName}"`);
 
         const packageBuildStartTime = new Date();
+        let packageBuildTimeout = null;
 
         const packageBuildReport: PackageBuildReport = {
             configuration: packageConfiguration,
@@ -216,6 +219,18 @@ const handlePackageList = async (aurPackageListPath: string) => {
                     Memory: FilesystemHelper.stringifiedSizeToBytes(packageListConfiguration.builderLimit.memory)
                 }
             });
+
+            // Automatically discard the container if it takes too long
+            packageBuildTimeout = setTimeout(async () => {
+                console.error(`[build-manager] The package took too long to build, aborting`);
+
+                packageBuildReport.logs.push({
+                    type: 'error',
+                    value: 'The package took too long to build, aborting'
+                });
+
+                await stopAllBuilderInstances();
+            }, maximumBuildTime * 1000);
 
             await container.start();
 
@@ -245,6 +260,11 @@ const handlePackageList = async (aurPackageListPath: string) => {
             // We are not sure if the container also stopped properly
             // So with this we are sure that no builders are still running
             await stopAllBuilderInstances();
+        }
+
+        // Stop the timeout timer
+        if (packageBuildTimeout) {
+            clearTimeout(packageBuildTimeout);
         }
 
         const packageBuildEndTime = new Date();

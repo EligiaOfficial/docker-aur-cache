@@ -11,6 +11,11 @@ export default class PackagelistConfigHelper {
                 new RequiredValidator(),
                 new TypeValidator("object")
             ],
+            'builderLimit.maxBuildTime': [
+                new RequiredValidator(),
+                new TypeValidator("string"),
+                new RegexValidator(new RegExp(/^(\d+)(s|m|h)$/))
+            ],
             'builderLimit.cpusetCpus': [
                 new RequiredValidator(),
                 new TypeValidator("string"),
