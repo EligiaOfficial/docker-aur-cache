@@ -9,7 +9,11 @@ export default class ContainerStatsTransformer extends Transform {
     }
 
     public _transform(data: any, encoding: BufferEncoding, callback: Function) {
-        this.processStats(data);
+        try {
+            this.processStats(data);
+        } catch (e) {
+            console.error(`[build-manager] An error occurred while processing the container stats`, e);
+        }
 
         callback();
     }
