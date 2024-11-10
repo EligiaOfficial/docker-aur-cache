@@ -214,6 +214,7 @@ const handlePackageList = async (aurPackageListPath: string) => {
                 User: 'builder',
                 Cmd: ['/bin/bash', '-c', command],
                 HostConfig: {
+                    OomScoreAdj: 1000, // Make it more likely the builder will be killed in low RAM situations instead of (potentially more crucial) applications
                     Mounts: BuilderHelper.getBuilderMounts(),
                     CpusetCpus: packageListConfiguration.builderLimit.cpusetCpus,
                     Memory: FilesystemHelper.stringifiedSizeToBytes(packageListConfiguration.builderLimit.memory)

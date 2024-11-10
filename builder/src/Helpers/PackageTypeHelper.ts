@@ -20,6 +20,10 @@ export default class PackageTypeHelper {
 
             const aurResult = await PackageTypeHelper.checkAURPackage(params, packageName);
             if (aurResult) {
+                if (aurResult.packageToInstall !== packageName) {
+                    console.warn(`[builder] Package "${packageName}" has a different package base according to the AUR, building "${aurResult.packageToInstall}" instead`);
+                }
+
                 resolve(aurResult);
 
                 return;
@@ -54,7 +58,7 @@ export default class PackageTypeHelper {
     }
 
     private static async checkSystemPackageViaPacman(packageName: string): Promise<PackageType | null> {
-        const result = await PackageHelper.isSystemPackage(packageName);
+        const result = PackageHelper.isSystemPackage(packageName);
 
         if (result) {
             return {
@@ -67,12 +71,14 @@ export default class PackageTypeHelper {
     }
 
     private static async checkAURPackage(params: Parameters, packageName: string): Promise<PackageType | null> {
-        const result = await PackageHelper.isAurPackage(params, packageName);
+        const result = PackageHelper.getAurPackageInformationByPackageName(params, packageName);
 
         if (result) {
+            const packageBaseIsDifferent = packageName !== result.PackageBase;
+
             return {
                 type: 'aur',
-                packageToInstall: packageName
+                packageToInstall: packageBaseIsDifferent ? result.PackageBase : packageName
             };
         }
 

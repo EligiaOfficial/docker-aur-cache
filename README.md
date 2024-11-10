@@ -116,6 +116,16 @@ Simply download the package from there and then install it manually with `pacman
 > Older versions of packages are automatically cleaned up after 30 days to preserve storage space on your server.
 
 
+### Package build fails with a SIGKILL
+Chances are that the build process consumed too much memory and was killed by the Docker engine or the host operating system.
+The builder process has been given a high OOM score to make sure it is killed first, instead of other _(potentially more crucial)_ applications.
+
+To resolve this, you will have to raise the builder memory limit, free up more RAM on the host machine or upgrade the host machine to have more RAM.
+
+> [!TIP]
+> Sometimes the AUR also provides `-bin` _(precompiled binary)_ variants of a package, this could also be a solution to work around the issue.
+
+
 ### Access the build reports
 The application generates a report every time it runs the build process, allowing you to more easily troubleshoot troublesome packages.
 

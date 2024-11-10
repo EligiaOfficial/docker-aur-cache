@@ -14,50 +14,53 @@ export default class PackageHelper {
         return PackageHelper.validPackageNameRegex.test(packageName);
     }
 
-    public static isSystemPackage(packageName: string): Promise<boolean> {
-        return new Promise(async (resolve, reject) => {
-            if (! PackageHelper.isValidPackageName(packageName)) {
-                console.warn(`[builder] System package "${packageName}" has an invalid name`);
+    public static isSystemPackage(packageName: string): boolean {
+        if (! PackageHelper.isValidPackageName(packageName)) {
+            console.warn(`[builder] System package "${packageName}" has an invalid name`);
 
-                return resolve(false);
+            return false;
+        }
+
+        try {
+            execSync(`pacman -Si ${packageName}`);
+
+            return true;
+        } catch (error: any) {
+            const errorStatus = error.status;
+            const errorOutput = error?.stderr?.toString();
+
+            // Check if the error is it telling us the package doesn't exist
+            if (errorStatus === 1 && PackageHelper.packageNotFoundRegex.test(errorOutput)) {
+                console.warn(`[builder] System package ${packageName} doesn't exist`);
+
+                return false;
             }
 
-            try {
-                execSync(`pacman -Si ${packageName}`);
-
-                return resolve(true);
-            } catch (error: any) {
-                const errorStatus = error.status;
-                const errorOutput = error?.stderr?.toString();
-
-                // Check if the error is it telling us the package doesn't exist
-                if (errorStatus === 1 && PackageHelper.packageNotFoundRegex.test(errorOutput)) {
-                    console.warn(`[builder] System package ${packageName} doesn't exist`);
-                    return resolve(false);
-                }
-
-                reject(error);
-            }
-        });
+            throw error;
+        }
     }
 
-    public static isAurPackage(params: Parameters, packageName: string): Promise<boolean> {
-        return new Promise(async (resolve, reject) => {
-            if (! PackageHelper.isValidPackageName(packageName)) {
-                console.warn(`[builder] AUR package "${packageName}" has an invalid name`);
+    public static isAurPackage(params: Parameters, packageName: string): boolean {
+        return !! PackageHelper.getAurPackageInformationByPackageName(params, packageName);
+    }
 
-                return resolve(false);
-            }
+    public static getAurPackageInformationByPackageName(params: Parameters, packageName: string): AurRpcApiPackage | null {
+        if (! PackageHelper.isValidPackageName(packageName)) {
+            console.warn(`[builder] AUR package "${packageName}" has an invalid name`);
 
-            const jsonRaw = fs.readFileSync(params.aur_package_list_path, 'utf8');
-            const jsonParsed: Array<AurRpcApiPackage> = JSON.parse(jsonRaw);
+            return null;
+        }
 
-            const foundPackage = !! jsonParsed.find((packageItem) => packageItem.Name === packageName);
+        const jsonRaw = fs.readFileSync(params.aur_package_list_path, 'utf8');
+        const jsonParsed: Array<AurRpcApiPackage> = JSON.parse(jsonRaw);
 
-            resolve(foundPackage);
+        const foundPackage = jsonParsed.find((packageItem) => packageItem.Name === packageName);
 
-            return;
-        });
+        if (! foundPackage) {
+            return null;
+        }
+
+        return foundPackage;
     }
 
     public static getPackagesInDirectory(directoryPath: string): Array<string> {
@@ -84,7 +87,7 @@ export default class PackageHelper {
                 console.log(`[builder] AUR package ${packageName} directory doesn't seem to exist yet`);
 
                 // Make sure it's a valid AUR package
-                if (! await PackageHelper.isAurPackage(params, packageName)) {
+                if (! PackageHelper.isAurPackage(params, packageName)) {
                     console.error(`[builder] isAurPackage reports ${packageName} to not be an existing AUR package!`);
 
                     return reject("Invalid AUR package");
@@ -97,7 +100,7 @@ export default class PackageHelper {
 
 
             const pkgbuildPath = `${fullPackagePath}/PKGBUILD`;
-            const pkgbuildData = await MakepkgHelper.parsePkgbuildFile(pkgbuildPath);
+            const pkgbuildData = MakepkgHelper.parsePkgbuildFile(pkgbuildPath);
 
             const dependsPackages      = MakepkgHelper.getDependsFromPkgbuildData(pkgbuildData);
             const makeDependsPackages  = MakepkgHelper.getMakeDependsFromPkgbuildData(pkgbuildData);
@@ -106,7 +109,7 @@ export default class PackageHelper {
             console.log(`[builder] Installing make dependencies for ${packageName}`);
             await Promise.all(
                 makeDependsPackages.map((dependencyPackageName: string) => 
-                    PackageHelper.installPackage(params, dependencyPackageName)
+                    PackageHelper.installPackage(params, dependencyPackageName, packageName)
                 )
             );
             console.log(`[builder] Done installing make dependencies for ${packageName}`);
@@ -114,7 +117,7 @@ export default class PackageHelper {
             console.log(`[builder] Installing check dependencies for ${packageName}`);
             await Promise.all(
                 checkDependsPackages.map((dependencyPackageName: string) => 
-                    PackageHelper.installPackage(params, dependencyPackageName)
+                    PackageHelper.installPackage(params, dependencyPackageName, packageName)
                 )
             );
             console.log(`[builder] Done installing check dependencies for ${packageName}`);
@@ -122,7 +125,7 @@ export default class PackageHelper {
             console.log(`[builder] Installing dependencies for ${packageName}`);
             await Promise.all(
                 dependsPackages.map((dependencyPackageName: string) => 
-                    PackageHelper.installPackage(params, dependencyPackageName)
+                    PackageHelper.installPackage(params, dependencyPackageName, packageName)
                 )
             );
             console.log(`[builder] Done installing dependencies for ${packageName}`);
@@ -168,7 +171,7 @@ export default class PackageHelper {
         });
     }
 
-    public static installPackage(params: Parameters, packageName: string): Promise<void> {
+    public static installPackage(params: Parameters, packageName: string, dependencyOf: string | null = null): Promise<void> {
         return new Promise(async (resolve, reject) => {
             const packageConfiguration = params.package_configuration;
             let realPackageName = packageName;
@@ -185,6 +188,14 @@ export default class PackageHelper {
 
             if (! packageType) {
                 reject(`[builder] The package "${realPackageName}" doesn't seem to exist`);
+
+                return;
+            }
+
+            if (packageType.packageToInstall === dependencyOf) {
+                console.warn(`[builder] The package "${dependencyOf}" tells us it requires "${packageType.packageToInstall}" as a dependency, which would cause an endless loop. We will just ignore this request.`);
+
+                resolve();
 
                 return;
             }
