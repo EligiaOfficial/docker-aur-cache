@@ -1,3 +1,4 @@
+import ContainerStatsLine from "./ContainerStatsLine";
 import PackageConfiguration from "./PackageConfiguration";
 import PackageBuildReportLogLine from "./PackageBuildReportLogLine";
 
@@ -6,5 +7,6 @@ export default interface PackageBuildReport {
     success: boolean,
     buildStartTime: Date,
     buildEndTime: Date,
+    containerStats: Array<ContainerStatsLine>,
     logs: Array<PackageBuildReportLogLine>,
 };

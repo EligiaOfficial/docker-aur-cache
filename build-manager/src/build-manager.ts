@@ -9,9 +9,11 @@ import FilesystemHelper from './Helpers/FilesystemHelper';
 import ValidatorHelper from './Helpers/ValidatorHelper';
 import PackagelistConfigHelper from './Helpers/PackagelistConfigHelper';
 import LineTransformer from './Transformers/LineTransformer';
+import ContainerStatsTransformer from './Transformers/ContainerStatsTransformer';
 import PackageListConfiguration from './Types/PackageListConfiguration';
 import PackageBuildReport from './Types/PackageBuildReport';
 import PackageBuildReportLogLine from './Types/PackageBuildReportLogLine';
+import ContainerStatsLine from './Types/ContainerStatsLine';
 
 const params = ParameterHelper.getParameters();
 const docker = new Docker({socketPath: '/var/run/docker.sock'});
@@ -199,6 +201,7 @@ const handlePackageList = async (aurPackageListPath: string) => {
             success: false,
             buildStartTime: packageBuildStartTime,
             buildEndTime: new Date(),
+            containerStats: [],
             logs: [],
         };
 
@@ -248,6 +251,20 @@ const handlePackageList = async (aurPackageListPath: string) => {
 
                 lineTransformer.on('data', (line: PackageBuildReportLogLine) => {
                     packageBuildReport.logs.push(line);
+                });
+            });
+
+            container.stats({stream: true}, function (_, stream) {
+                const containerStatsTransformer = new ContainerStatsTransformer();
+
+                if (! stream) {
+                    return;
+                }
+
+                stream.pipe(containerStatsTransformer);
+
+                containerStatsTransformer.on('data', (line: ContainerStatsLine) => {
+                    packageBuildReport.containerStats.push(line);
                 });
             });
 
