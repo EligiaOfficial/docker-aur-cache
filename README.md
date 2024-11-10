@@ -42,7 +42,7 @@ The container should now be ready, try visiting your domain and you should see a
 This page will also show packages that are available for downloading.
 
 > [!TIP]
-> Normally you would have to wait until Sunday @ 01:00 for it to start building, but instructions are available in case you want to start the build immediately.
+> Normally you would have to wait until Monday @ 01:00 for it to start building, but instructions are available in case you want to start the build immediately.
 > See the section **Force the build immediately** for more information.
 
 
@@ -77,10 +77,11 @@ This is the root of the `packagelist.config.json` file.
 ### Builder limit object description
 This object is used to limit how many system resources the builder instance is allowed to use.
 
-| **Field**    | **Required** | **Type** | **Description**                                                                                                                                                      |
-|--------------|--------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `cpusetCpus` | Yes          | `string` | Defines which CPU cores it's allowed to use. It can be a list _(`0,1,2,3`)_ of cores or a range of cores _(`0-3`)_.                                                  |
-| `memory`     | Yes          | `string` | Defines how much memory it's allowed to use before it's terminated. The format is `1234X`, where X determines the scale. Allowed scales are `b`, `k`, `m`, `g`. |
+| **Field**      | **Required** | **Type** | **Description**                                                                                                                                                                    |
+|----------------|--------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `maxBuildTime` | Yes          | `string` | Defines how long the build process is allowed to run for 1 package before it's terminated. The format is `1234X`, where X determines the scale. Allowed scales are `s`, `m`, `h` . |
+| `cpusetCpus`   | Yes          | `string` | Defines which CPU cores it's allowed to use. It can be a list _(`0,1,2,3`)_ of cores or a range of cores _(`0-3`)_.                                                                |
+| `memory`       | Yes          | `string` | Defines how much memory it's allowed to use before it's terminated. The format is `1234X`, where X determines the scale. Allowed scales are `b`, `k`, `m`, `g`.                    |
 
 
 ### Package object description
@@ -113,6 +114,16 @@ Simply download the package from there and then install it manually with `pacman
 
 > [!WARNING]
 > Older versions of packages are automatically cleaned up after 30 days to preserve storage space on your server.
+
+
+### Package build fails with a SIGKILL
+Chances are that the build process consumed too much memory and was killed by the Docker engine or the host operating system.
+The builder process has been given a high OOM score to make sure it is killed first, instead of other _(potentially more crucial)_ applications.
+
+To resolve this, you will have to raise the builder memory limit, free up more RAM on the host machine or upgrade the host machine to have more RAM.
+
+> [!TIP]
+> Sometimes the AUR also provides `-bin` _(precompiled binary)_ variants of a package, this could also be a solution to work around the issue.
 
 
 ### Access the build reports

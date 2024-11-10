@@ -3,6 +3,7 @@ FROM --platform=linux/amd64 archlinux:multilib-devel
 # Update the image and install dependencies
 ENV CARCH=x86_64
 RUN pacman-key --init
+RUN pacman -Sy --noconfirm archlinux-keyring
 RUN pacman -Syu --noconfirm git base-devel fcron nodejs-lts-iron npm
 
 # Create the builder user

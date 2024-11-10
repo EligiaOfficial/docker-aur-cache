@@ -1,5 +1,6 @@
 {
     "builderLimit": {
+        "maxBuildTime": "15m",
         "cpusetCpus": "0-3",
         "memory": "4096m"
     },

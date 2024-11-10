@@ -9,9 +9,11 @@ import FilesystemHelper from './Helpers/FilesystemHelper';
 import ValidatorHelper from './Helpers/ValidatorHelper';
 import PackagelistConfigHelper from './Helpers/PackagelistConfigHelper';
 import LineTransformer from './Transformers/LineTransformer';
+import ContainerStatsTransformer from './Transformers/ContainerStatsTransformer';
 import PackageListConfiguration from './Types/PackageListConfiguration';
 import PackageBuildReport from './Types/PackageBuildReport';
 import PackageBuildReportLogLine from './Types/PackageBuildReportLogLine';
+import ContainerStatsLine from './Types/ContainerStatsLine';
 
 const params = ParameterHelper.getParameters();
 const docker = new Docker({socketPath: '/var/run/docker.sock'});
@@ -186,16 +188,20 @@ const publishBuildPackages = async () => {
 }
 
 const handlePackageList = async (aurPackageListPath: string) => {
+    const maximumBuildTime = TimeHelper.stringifiedTimeDurationToSeconds(packageListConfiguration.builderLimit.maxBuildTime);
+
     for await (const packageConfiguration of packageListConfiguration.packages) {
         console.log(`[build-manager] Processing "${packageConfiguration.packageName}"`);
 
         const packageBuildStartTime = new Date();
+        let packageBuildTimeout = null;
 
         const packageBuildReport: PackageBuildReport = {
             configuration: packageConfiguration,
             success: false,
             buildStartTime: packageBuildStartTime,
             buildEndTime: new Date(),
+            containerStats: [],
             logs: [],
         };
 
@@ -211,11 +217,24 @@ const handlePackageList = async (aurPackageListPath: string) => {
                 User: 'builder',
                 Cmd: ['/bin/bash', '-c', command],
                 HostConfig: {
+                    OomScoreAdj: 1000, // Make it more likely the builder will be killed in low RAM situations instead of (potentially more crucial) applications
                     Mounts: BuilderHelper.getBuilderMounts(),
                     CpusetCpus: packageListConfiguration.builderLimit.cpusetCpus,
                     Memory: FilesystemHelper.stringifiedSizeToBytes(packageListConfiguration.builderLimit.memory)
                 }
             });
+
+            // Automatically discard the container if it takes too long
+            packageBuildTimeout = setTimeout(async () => {
+                console.error(`[build-manager] The package took too long to build, aborting`);
+
+                packageBuildReport.logs.push({
+                    type: 'error',
+                    value: 'The package took too long to build, aborting'
+                });
+
+                await stopAllBuilderInstances();
+            }, maximumBuildTime * 1000);
 
             await container.start();
 
@@ -235,6 +254,20 @@ const handlePackageList = async (aurPackageListPath: string) => {
                 });
             });
 
+            container.stats({stream: true}, function (_, stream) {
+                const containerStatsTransformer = new ContainerStatsTransformer();
+
+                if (! stream) {
+                    return;
+                }
+
+                stream.pipe(containerStatsTransformer);
+
+                containerStatsTransformer.on('data', (line: ContainerStatsLine) => {
+                    packageBuildReport.containerStats.push(line);
+                });
+            });
+
             // Wait for the container to finish it's job
             await container.wait();
 
@@ -245,6 +278,11 @@ const handlePackageList = async (aurPackageListPath: string) => {
             // We are not sure if the container also stopped properly
             // So with this we are sure that no builders are still running
             await stopAllBuilderInstances();
+        }
+
+        // Stop the timeout timer
+        if (packageBuildTimeout) {
+            clearTimeout(packageBuildTimeout);
         }
 
         const packageBuildEndTime = new Date();
