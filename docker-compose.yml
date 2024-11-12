@@ -1,43 +1,23 @@
 services:
   build-manager:
-    build:
-      context: ./
-      dockerfile: ./build-manager/docker/Dockerfile
-      args:
-        - DOCKER_GID=${DOCKER_GID:-964}
+    image: builder-manager:latest
+    container_name: aur-cache
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./repository:/repository:cached
-      - ./packagelist.config.json:/repository-builder/packagelist.config.json:ro
-      - package-staging:/package-staging
-      - aur-package-list:/aur-package-list
+      - "./config:/config:rw"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "repository:/usr/share/nginx/html:rw"
+      - "package-staging:/package-staging:rw"
+      - "aur-package-list:/aur-package-list:rw"
+    environment:
+      - "PUID=1000"
+      - "DOCKER_PGID=969"
+#      - "BASE_URL=docker-aur-cache.localhost"
+#      - "TRAEFIK_NETWORK=traefik-reverse-proxy"
+    ports:
+      - "80:80"
     restart: unless-stopped
-    networks:
-      - default
-
-  nginx:
-    image: nginx:latest
-    volumes:
-      - ./repository:/usr/share/nginx/html:ro
-      - ./assets/nginx-default.conf:/etc/nginx/conf.d/default.conf:ro
-    restart: unless-stopped
-    networks:
-      - default
-      - traefik-reverse-proxy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik-reverse-proxy"
-      - "traefik.http.routers.docker-aur-cache-nginx.rule=Host(`${BASE_URL:-docker-aur-cache.localhost}`)"
-      - "traefik.http.routers.docker-aur-cache-nginx.entrypoints=http"
-      - "traefik.http.routers.docker-aur-cache-nginx.tls=false"
 
 volumes:
   package-staging:
   aur-package-list:
-
-# You can find the Traefik reverse proxy container on GitHub
-# https://github.com/CrazyVito11/traefik-reverse-proxy
-networks:
-  traefik-reverse-proxy:
-    name: traefik-reverse-proxy
-    external: true
+  repository:

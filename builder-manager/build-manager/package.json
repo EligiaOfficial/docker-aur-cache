@@ -1,14 +1,16 @@
 {
-  "name": "builder",
-  "main": "./src/builder.ts",
+  "name": "build-manager",
+  "main": "src/build-manager.ts",
   "scripts": {
     "build": "npx tsc"
   },
   "devDependencies": {
+    "@types/dockerode": "^3.3.31",
     "@types/node": "^20.14.11",
     "typescript": "^5.5.3"
   },
   "dependencies": {
+    "dockerode": "^4.0.2",
     "minimist": "^1.2.8"
   }
 }

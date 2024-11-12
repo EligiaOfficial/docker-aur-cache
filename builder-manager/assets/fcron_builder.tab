@@ -1,5 +1,5 @@
 # Automatically update the packages (Monday @ 01:00)
-0 1 * * 1 builder bash /repository-builder/build-packages.sh
+0 1 * * 1 builder bash /assets/build-packages.sh
 
 # Automatically clean up old packages in the repository archive (Monday @ 23:59)
-59 23 * * 1 builder bash /repository-builder/clean-repository-archive.sh
+59 23 * * 1 builder bash /assets/clean-repository-archive.sh

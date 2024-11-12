@@ -62,7 +62,7 @@ console.log(`[build-manager] Repository name: ${params.repository_name}`);
 
 
 const removeOldDockerImage = async () => {
-    console.log("[build-manager] Removing old builder Docker images");
+    console.log("[builder-manager] Removing old builder Docker images");
 
     const dockerImages = await docker.listImages({
         filters: {
@@ -78,11 +78,11 @@ const removeOldDockerImage = async () => {
         docker.getImage(dockerImage.Id).remove({ force: true })
     });
 
-    console.log("[build-manager] Old builder Docker images have been removed");
+    console.log("[builder-manager] Old builder Docker images have been removed");
 }
 
 const buildNewDockerImage = async () => {
-    console.log("[build-manager] Building a fresh builder Docker image");
+    console.log("[builder-manager] Building a fresh builder Docker image");
 
     const buildSteam = await docker.buildImage(
         {
@@ -116,11 +116,11 @@ const buildNewDockerImage = async () => {
         );
     });
 
-    console.log("[build-manager] Builder Docker image is ready!");
+    console.log("[builder-manager] Builder Docker image is ready!");
 }
 
 const stopAllBuilderInstances = async () => {
-    console.log("[build-manager] Stopping old builder containers");
+    console.log("[builder-manager] Stopping old builder containers");
 
     const dockerImages = await docker.listImages({
         filters: {
@@ -142,48 +142,48 @@ const stopAllBuilderInstances = async () => {
         }
     }
 
-    console.log("[build-manager] Old builder containers have been stopped");
+    console.log("[builder-manager] Old builder containers have been stopped");
 }
 
 const prepareAurPackageList = async (): Promise<string> => {
-    console.log("[build-manager] Preparing the AUR package list");
+    console.log("[builder-manager] Preparing the AUR package list");
 
     execSync(`cd /aur-package-list; curl https://aur.archlinux.org/packages-meta-ext-v1.json.gz -O; gzip -d -f packages-meta-ext-v1.json.gz; ls -al packages-meta-ext-v1.json`);
 
-    console.log("[build-manager] The AUR package list is ready");
+    console.log("[builder-manager] The AUR package list is ready");
 
     return '/aur-package-list/packages-meta-ext-v1.json';
 }
 
 const moveOldPackagesToArchive = async () => {
-    console.log("[build-manager] Moving old packages to the archive");
+    console.log("[builder-manager] Moving old packages to the archive");
 
     if (! FilesystemHelper.getFileCountInDirectoryByFileExtension(params.repository_dir, 'pkg.tar.zst')) {
-        console.log("[build-manager] Seems like there are no packages that need to be archived");
+        console.log("[builder-manager] Seems like there are no packages that need to be archived");
 
         return;
     }
 
     execSync(`mv ${params.repository_dir}/*.pkg.tar.zst ${params.repository_archive_dir}/`);
 
-    console.log("[build-manager] Old packages have been archived");
+    console.log("[builder-manager] Old packages have been archived");
 }
 
 const publishBuildPackages = async () => {
-    console.log("[build-manager] Copying new packages");
+    console.log("[builder-manager] Copying new packages");
 
     if (! FilesystemHelper.getFileCountInDirectoryByFileExtension(params.package_staging_dir, 'pkg.tar.zst')) {
-        console.warn("[build-manager] Hmmmm, seems like there are no packages available in the staging area, maybe all the packages failed to build?");
+        console.warn("[builder-manager] Hmmmm, seems like there are no packages available in the staging area, maybe all the packages failed to build?");
 
         return;
     }
 
     execSync(`mv ${params.package_staging_dir}/*.pkg.tar.zst ${params.repository_dir}/`);
 
-    console.log("[build-manager] Removing old database (if it exists)");
+    console.log("[builder-manager] Removing old database (if it exists)");
     execSync(`rm -f ${params.repository_dir}/${params.repository_name}.db* ${params.repository_dir}/${params.repository_name}.files*`);
 
-    console.log("[build-manager] Adding packages to database");
+    console.log("[builder-manager] Adding packages to database");
     execSync(`repo-add ${params.repository_dir}/${params.repository_name}.db.tar.gz ${params.repository_dir}/*.pkg.tar.zst`);
 }
 
@@ -304,7 +304,7 @@ const handlePackageList = async (aurPackageListPath: string) => {
 }
 
 const generateBuildReport = async () => {
-    console.log("[build-manager] Generating build report");
+    console.log("[builder-manager] Generating build report");
 
     const currentDate = new Date();
     const formattedDate = TimeHelper.getFormattedDateTimeForFilename(currentDate);
@@ -314,7 +314,7 @@ const generateBuildReport = async () => {
         JSON.stringify(packageBuildReports)
     );
 
-    console.log("[build-manager] The build report has been generated");
+    console.log("[builder-manager] The build report has been generated");
 };
 
 const startBuilding = async () => {

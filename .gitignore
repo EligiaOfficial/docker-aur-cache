@@ -1,6 +1,0 @@
-.vscode
-
-repository/*
-!repository/.gitkeep
-packagelist.config.json
-.env
